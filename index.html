@@ -182,27 +182,7 @@
     margin-bottom:14px;
   }
 
-  .player-wrap{
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    gap:6px;
-    margin-bottom:18px;
-  }
-  #player{
-    width:160px;
-    height:90px;
-    border-radius:10px;
-    overflow:hidden;
-    filter: blur(30px) brightness(0.6);
-    transition: filter .2s ease;
-  }
-  .player-hint{
-    font-size:11px;
-    color:var(--text-dim);
-    text-align:center;
-    max-width:220px;
-  }
+  #player{ position:absolute; width:200px; height:200px; left:-9999px; top:-9999px; }
 
   .hint{
     text-align:center;
@@ -253,10 +233,7 @@
     <button class="btn-primary" id="nextBtn">שיר הבא</button>
   </div>
 
-  <div class="player-wrap" id="playerWrap">
-    <div id="player"></div>
-    <p class="player-hint">מטושטש בכוונה כדי לא לחשוף את השיר — אם מופיעה כאן פרסומת של יוטיוב, אפשר ללחוץ "Skip Ad" בפינה</p>
-  </div>
+  <div id="player"></div>
   <iframe id="scPlayer" src="https://w.soundcloud.com/player/?url=" style="position:absolute; left:-9999px; top:-9999px; width:1px; height:1px;" allow="autoplay"></iframe>
   <p class="hint">מקורות: YouTube ו-SoundCloud בלבד · שירים רשמיים שיצאו</p>
 </div>
@@ -270,74 +247,74 @@
    start:   שניה שבה מתחילים לנגן (מדלגים על אינטרו/שקט)
    ========================================================= */
 const SONGS = [
-  { artist: "Queen",            title: "Bohemian Rhapsody",   videoId: "fJ9rUzIMcZQ", start: 80 },
-  { artist: "Ed Sheeran",       title: "Shape of You",        videoId: "JGwWNGJdvx8", start: 80 },
-  { artist: "Adele",            title: "Rolling in the Deep", videoId: "rYEDA3JcQqw", start: 80 },
-  { artist: "Coldplay",         title: "Viva la Vida",        videoId: "dvgZkm1xWPE", start: 80 },
-  { artist: "Michael Jackson",  title: "Billie Jean",         videoId: "Zi_XLOBDo_Y", start: 80 },
-  { artist: "The Beatles",      title: "Hey Jude",            videoId: "A_MjCqQoLLA", start: 80 },
+  { artist: "Queen",            title: "Bohemian Rhapsody",   videoId: "fJ9rUzIMcZQ", start: 40 },
+  { artist: "Ed Sheeran",       title: "Shape of You",        videoId: "JGwWNGJdvx8", start: 40 },
+  { artist: "Adele",            title: "Rolling in the Deep", videoId: "rYEDA3JcQqw", start: 40 },
+  { artist: "Coldplay",         title: "Viva la Vida",        videoId: "dvgZkm1xWPE", start: 40 },
+  { artist: "Michael Jackson",  title: "Billie Jean",         videoId: "Zi_XLOBDo_Y", start: 40 },
+  { artist: "The Beatles",      title: "Hey Jude",            videoId: "A_MjCqQoLLA", start: 40 },
 
   // --- נוספו לפי בקשת יולי ---
-  { artist: "Kanye West",           title: "Stronger",                 videoId: "PsO6ZnUZI0g", start: 80 },
-  { artist: "Travis Scott",         title: "SICKO MODE",               videoId: "6ONRf7h3Mdk", start: 80 },
-  { artist: "Playboi Carti",        title: "Magnolia",                 source: "soundcloud", scId: 317594712, start: 80 },
-  { artist: "Lil Uzi Vert",         title: "XO Tour Llif3",            source: "soundcloud", scId: 313999085, start: 80 },
-  { artist: "Tyler, The Creator",   title: "EARFQUAKE",                videoId: "t-E2gm0a_N0", start: 80 },
-  { artist: "Yeat",                 title: "Talk",                     source: "soundcloud", scId: 1333635664, start: 80 },
-  { artist: "Ken Carson",           title: "Succubus",                 source: "soundcloud", scId: 1638569793, start: 80 },
-  { artist: "Rihanna",              title: "Umbrella",                 videoId: "scRHNxiP8W0", start: 80 },
-  { artist: "Black Eyed Peas",      title: "I Gotta Feeling",          videoId: "uSD4vsh1zDA", start: 80 },
-  { artist: "Childish Gambino",     title: "This Is America",          videoId: "VYOjWnS4cMY", start: 80  },
-  { artist: "Kendrick Lamar",       title: "HUMBLE.",                  videoId: "MXaqpJmX7JE", start: 80  },
-  { artist: "Lady Gaga",            title: "Bad Romance",              videoId: "qrO4YZeyl0I", start: 80 },
-  { artist: "50 Cent",              title: "In Da Club",               videoId: "5qm8PH4xAss", start: 80 },
-  { artist: "The Weeknd",           title: "Blinding Lights",          videoId: "4NRXx6U8ABQ", start: 80  },
-  { artist: "Justin Bieber",        title: "Sorry",                    videoId: "fRh_vgS2dFE", start: 80 },
-  { artist: "Justin Timberlake",    title: "Can't Stop The Feeling!",  videoId: "ru0K8uYEZWw", start: 80 },
-  { artist: "Drake",                title: "God's Plan",               videoId: "xpVfcZ0ZcFM", start: 80 },
-  { artist: "Eminem",               title: "Lose Yourself",            videoId: "eRhEcKHU5LY", start: 80 },
-  { artist: "Gorillaz",             title: "Feel Good Inc.",           videoId: "HyHNuVaZJ-k", start: 80 },
-  { artist: "Radiohead",            title: "Creep",                    videoId: "XFkzRNyygfk", start: 80 },
-  { artist: "Nirvana",              title: "Smells Like Teen Spirit",  videoId: "hTWKbfoikeg", start: 80 },
-  { artist: "Pink Floyd",           title: "Another Brick In The Wall, Pt. 2", videoId: "HrxX9TBj2zY", start: 80 },
-  { artist: "Tame Impala",          title: "The Less I Know The Better", videoId: "sBzrzS1Ag_g", start: 80 },
-  { artist: "Juice WRLD",           title: "Lucid Dreams",             videoId: "mzB1VGEGcSU", start: 80 },
-  { artist: "Sewerperson",          title: "what if (sorrowbringer)",  source: "soundcloud", scId: 1990449647, start: 80 },
+  { artist: "Kanye West",           title: "Stronger",                 source: "soundcloud", scId: 255766528, start: 40 },
+  { artist: "Travis Scott",         title: "SICKO MODE",               source: "soundcloud", scId: 480200517, start: 40 },
+  { artist: "Playboi Carti",        title: "Magnolia",                 source: "soundcloud", scId: 317594712, start: 40 },
+  { artist: "Lil Uzi Vert",         title: "XO Tour Llif3",            source: "soundcloud", scId: 313999085, start: 40 },
+  { artist: "Tyler, The Creator",   title: "EARFQUAKE",                videoId: "t-E2gm0a_N0", start: 40 },
+  { artist: "Yeat",                 title: "Talk",                     source: "soundcloud", scId: 1333635664, start: 40 },
+  { artist: "Ken Carson",           title: "Succubus",                 source: "soundcloud", scId: 1638569793, start: 40 },
+  { artist: "Rihanna",              title: "Umbrella",                 source: "soundcloud", scId: 255769529, start: 15 },
+  { artist: "Black Eyed Peas",      title: "I Gotta Feeling",          source: "soundcloud", scId: 253634744, start: 15 },
+  { artist: "Childish Gambino",     title: "This Is America",          source: "soundcloud", scId: 439450881, start: 40 },
+  { artist: "Kendrick Lamar",       title: "HUMBLE.",                  videoId: "MXaqpJmX7JE", start: 40  },
+  { artist: "Lady Gaga",            title: "Bad Romance",              source: "soundcloud", scId: 255899647, start: 15 },
+  { artist: "50 Cent",              title: "In Da Club",               source: "soundcloud", scId: 255894007, start: 15 },
+  { artist: "The Weeknd",           title: "Blinding Lights",          videoId: "4NRXx6U8ABQ", start: 40  },
+  { artist: "Justin Bieber",        title: "Sorry",                    videoId: "fRh_vgS2dFE", start: 40 },
+  { artist: "Justin Timberlake",    title: "Can't Stop The Feeling!",  videoId: "ru0K8uYEZWw", start: 40 },
+  { artist: "Drake",                title: "God's Plan",               videoId: "xpVfcZ0ZcFM", start: 40 },
+  { artist: "Eminem",               title: "Lose Yourself",            videoId: "eRhEcKHU5LY", start: 40 },
+  { artist: "Gorillaz",             title: "Feel Good Inc.",           videoId: "HyHNuVaZJ-k", start: 40 },
+  { artist: "Radiohead",            title: "Creep",                    videoId: "XFkzRNyygfk", start: 40 },
+  { artist: "Nirvana",              title: "Smells Like Teen Spirit",  videoId: "hTWKbfoikeg", start: 40 },
+  { artist: "Pink Floyd",           title: "Another Brick In The Wall, Pt. 2", videoId: "HrxX9TBj2zY", start: 40 },
+  { artist: "Tame Impala",          title: "The Less I Know The Better", videoId: "sBzrzS1Ag_g", start: 40 },
+  { artist: "Juice WRLD",           title: "Lucid Dreams",             source: "soundcloud", scId: 328259811, start: 40 },
+  { artist: "Sewerperson",          title: "what if (sorrowbringer)",  source: "soundcloud", scId: 1990449647, start: 40 },
 
   // --- הרחבה שנייה: עוד שיר/שניים לכל אמן ---
-  { artist: "Queen",                title: "Don't Stop Me Now",        videoId: "HgzGwKwLmgM", start: 80 },
-  { artist: "Ed Sheeran",           title: "Perfect",                  videoId: "2Vv-BfVoq4g", start: 80 },
-  { artist: "Adele",                title: "Hello",                    videoId: "YQHsXMglC9A", start: 80 },
-  { artist: "Coldplay",             title: "Yellow",                   videoId: "yKNxeF4KMsY", start: 80 },
-  { artist: "Michael Jackson",      title: "Thriller",                 videoId: "sOnqjkJTMaA", start: 80 },
-  { artist: "Michael Jackson",      title: "Beat It",                  videoId: "oRdxUFDoQe0", start: 80 },
-  { artist: "The Beatles",          title: "Come Together",            videoId: "45cYwDMibGo", start: 80 },
-  { artist: "Kanye West",           title: "Gold Digger",              videoId: "6vwNcNOTVzY", start: 80 },
-  { artist: "Travis Scott",         title: "goosebumps",               videoId: "Dst9gZkq1a8", start: 80 },
-  { artist: "Playboi Carti",        title: "Location",                 source: "soundcloud", scId: 316331104, start: 80 },
-  { artist: "Lil Uzi Vert",         title: "Money Longer",             source: "soundcloud", scId: 245673410, start: 80 },
-  { artist: "Tyler, The Creator",   title: "See You Again",            videoId: "EZE62LpaqHg", start: 80 },
-  { artist: "Yeat",                 title: "Rich Minion",              source: "soundcloud", scId: 1298151202, start: 80 },
-  { artist: "Ken Carson",           title: "Fighting My Demons",       source: "soundcloud", scId: 1638569946, start: 80 },
-  { artist: "Rihanna",              title: "Diamonds",                 videoId: "lWA2pjMjpBs", start: 80 },
-  { artist: "Rihanna",              title: "Work",                     videoId: "HL1UzIK-flA", start: 80 },
-  { artist: "Black Eyed Peas",      title: "Where Is The Love?",       videoId: "WpYeekQkAdc", start: 80 },
-  { artist: "Childish Gambino",     title: "Redbone",                  videoId: "k49I5m1J6Is", start: 80 },
-  { artist: "Kendrick Lamar",       title: "Not Like Us",              videoId: "H58vbez_m4E", start: 80 },
-  { artist: "Lady Gaga",            title: "Poker Face",               videoId: "bESGLojNYSo", start: 80 },
-  { artist: "50 Cent",              title: "Candy Shop",               videoId: "SRcnnId15BA", start: 80 },
-  { artist: "The Weeknd",           title: "Starboy",                  videoId: "34Na4j8AVgA", start: 80 },
-  { artist: "Justin Bieber",        title: "Baby",                     videoId: "kffacxfA7G4", start: 80 },
-  { artist: "Justin Timberlake",    title: "SexyBack",                 videoId: "3gOHvDP_vCs", start: 80 },
-  { artist: "Drake",                title: "Hotline Bling",            videoId: "d0XEvGF7sb0", start: 80 },
-  { artist: "Eminem",               title: "Without Me",               videoId: "YVkUvmDQ3HY", start: 80 },
-  { artist: "Gorillaz",             title: "Clint Eastwood",           videoId: "1V_xRb0x9aw", start: 80 },
-  { artist: "Radiohead",            title: "Karma Police",             videoId: "1uYWYWPc9HU", start: 80 },
-  { artist: "Nirvana",              title: "Come As You Are",          videoId: "vabnZ9-ex7o", start: 80 },
-  { artist: "Pink Floyd",           title: "Wish You Were Here",       videoId: "K6qj09OHvjw", start: 80 },
-  { artist: "Tame Impala",          title: "Let It Happen",            videoId: "pFptt7Cargc", start: 80 },
-  { artist: "Juice WRLD",           title: "All Girls Are The Same",   videoId: "h3EJICKwITw", start: 80 },
-  { artist: "Sewerperson",          title: "im cold (sorrowbringer)",  source: "soundcloud", scId: 1798511755, start: 80 },
+  { artist: "Queen",                title: "Don't Stop Me Now",        videoId: "HgzGwKwLmgM", start: 40 },
+  { artist: "Ed Sheeran",           title: "Perfect",                  videoId: "2Vv-BfVoq4g", start: 40 },
+  { artist: "Adele",                title: "Hello",                    videoId: "YQHsXMglC9A", start: 40 },
+  { artist: "Coldplay",             title: "Yellow",                   videoId: "yKNxeF4KMsY", start: 40 },
+  { artist: "Michael Jackson",      title: "Thriller",                 videoId: "sOnqjkJTMaA", start: 40 },
+  { artist: "Michael Jackson",      title: "Beat It",                  videoId: "oRdxUFDoQe0", start: 40 },
+  { artist: "The Beatles",          title: "Come Together",            videoId: "45cYwDMibGo", start: 40 },
+  { artist: "Kanye West",           title: "Gold Digger",              source: "soundcloud", scId: 255766412, start: 40 },
+  { artist: "Travis Scott",         title: "goosebumps",               videoId: "Dst9gZkq1a8", start: 40 },
+  { artist: "Playboi Carti",        title: "Location",                 source: "soundcloud", scId: 316331104, start: 40 },
+  { artist: "Lil Uzi Vert",         title: "Money Longer",             source: "soundcloud", scId: 245673410, start: 40 },
+  { artist: "Tyler, The Creator",   title: "See You Again",            videoId: "EZE62LpaqHg", start: 40 },
+  { artist: "Yeat",                 title: "Rich Minion",              source: "soundcloud", scId: 1298151202, start: 40 },
+  { artist: "Ken Carson",           title: "Fighting My Demons",       source: "soundcloud", scId: 1638569946, start: 40 },
+  { artist: "Rihanna",              title: "Diamonds",                 source: "soundcloud", scId: 718250533, start: 15 },
+  { artist: "Rihanna",              title: "Work",                     source: "soundcloud", scId: 255769417, start: 15 },
+  { artist: "Black Eyed Peas",      title: "Where Is The Love?",       videoId: "WpYeekQkAdc", start: 40 },
+  { artist: "Childish Gambino",     title: "Redbone",                  videoId: "k49I5m1J6Is", start: 40 },
+  { artist: "Kendrick Lamar",       title: "Not Like Us",              source: "soundcloud", scId: 1814709189, start: 40 },
+  { artist: "Lady Gaga",            title: "Poker Face",               source: "soundcloud", scId: 255905673, start: 15 },
+  { artist: "50 Cent",              title: "Candy Shop",               source: "soundcloud", scId: 255894115, start: 15 },
+  { artist: "The Weeknd",           title: "Starboy",                  source: "soundcloud", scId: 284056452, start: 15 },
+  { artist: "Justin Bieber",        title: "Baby",                     videoId: "kffacxfA7G4", start: 40 },
+  { artist: "Justin Timberlake",    title: "SexyBack",                 videoId: "3gOHvDP_vCs", start: 40 },
+  { artist: "Drake",                title: "Hotline Bling",            videoId: "d0XEvGF7sb0", start: 40 },
+  { artist: "Eminem",               title: "Without Me",               videoId: "YVkUvmDQ3HY", start: 40 },
+  { artist: "Gorillaz",             title: "Clint Eastwood",           videoId: "1V_xRb0x9aw", start: 40 },
+  { artist: "Radiohead",            title: "Karma Police",             videoId: "1uYWYWPc9HU", start: 40 },
+  { artist: "Nirvana",              title: "Come As You Are",          videoId: "vabnZ9-ex7o", start: 40 },
+  { artist: "Pink Floyd",           title: "Wish You Were Here",       videoId: "K6qj09OHvjw", start: 40 },
+  { artist: "Tame Impala",          title: "Let It Happen",            videoId: "pFptt7Cargc", start: 40 },
+  { artist: "Juice WRLD",           title: "All Girls Are The Same",   source: "soundcloud", scId: 373180994, start: 40 },
+  { artist: "Sewerperson",          title: "im cold (sorrowbringer)",  source: "soundcloud", scId: 1798511755, start: 40 },
 ];
 
 const DURATIONS = [0.5, 1, 2, 4, 8, 16]; // סולם הזמנים, כמו במשחק המקורי
@@ -353,7 +330,6 @@ const els = {
   ladder: document.getElementById('ladder'),
   waveform: document.getElementById('waveform'),
   silentWarning: document.getElementById('silentWarning'),
-  playerWrap: document.getElementById('playerWrap'),
   durationLabel: document.getElementById('durationLabel'),
   attemptLabel: document.getElementById('attemptLabel'),
   startBtn: document.getElementById('startBtn'),
@@ -464,7 +440,7 @@ function createPlayer(){
     height: '200',
     width: '200',
     videoId: SONGS.find(s => s.source !== 'soundcloud').videoId,
-    playerVars: { autoplay: 0, controls: 1, disablekb: 1 },
+    playerVars: { autoplay: 0, controls: 0, disablekb: 1 },
     events: {
       onReady: (e) => {
         e.target.unMute();
@@ -532,7 +508,6 @@ function playSongSnippet(){
 
   els.stopBtn.disabled = false;
   els.silentWarning.style.display = 'none';
-  els.playerWrap.style.display = isSC ? 'none' : 'flex'; // הטשטוש/דילוג-פרסומות רלוונטי רק ליוטיוב
 
   if(isSC){
     if(!scWidget || !scReady) return;
@@ -571,15 +546,24 @@ function playSongSnippet(){
     player.setVolume(100);
     player.loadVideoById({ videoId: currentSong.videoId, startSeconds: start });
 
-    // אם אחרי 3 שניות עדיין לא ממש "מנגן" - כנראה שהסאונד חסום כאן
-    stuckTimer = setTimeout(() => {
+    // אם אחרי 3 שניות עדיין לא ממש "מנגן" - ננסה שוב פעם אחת בשקט
+    // (זו לפעמים תקלה חד-פעמית של הפקודה הראשונה ליוטיוב, לא בעיה אמיתית)
+    let retriedOnce = false;
+    const checkStuck = () => {
       const state = player.getPlayerState ? player.getPlayerState() : null;
       if(state !== 1){
-        setWaveform(false);
-        els.silentWarning.textContent = 'לא הצלחתי להשמיע - נסו לרענן את הדף וללחוץ שוב על הפעלה, או לוודא שהעוצמה בדפדפן/במחשב לא באפס.';
-        els.silentWarning.style.display = 'block';
+        if(!retriedOnce){
+          retriedOnce = true;
+          player.loadVideoById({ videoId: currentSong.videoId, startSeconds: start });
+          stuckTimer = setTimeout(checkStuck, 3000);
+        } else {
+          setWaveform(false);
+          els.silentWarning.textContent = 'לא הצלחתי להשמיע - נסו לרענן את הדף וללחוץ שוב על הפעלה, או לוודא שהעוצמה בדפדפן/במחשב לא באפס.';
+          els.silentWarning.style.display = 'block';
+        }
       }
-    }, 3000);
+    };
+    stuckTimer = setTimeout(checkStuck, 3000);
 
     checkTimer = setInterval(() => {
       const t = player.getCurrentTime ? player.getCurrentTime() : 0;
