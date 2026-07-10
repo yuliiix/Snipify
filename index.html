@@ -505,6 +505,8 @@ loadYouTubeAPI(); // מתחילים לטעון מיד עם פתיחת הדף
 
 // SoundCloud Widget - אין פרסומות בהטמעה שלו, אז הוא נשאר מוסתר לגמרי
 let pendingSnippetDuration = null; // כמה שניות לנגן ברגע שה-PLAY האמיתי יתקבל
+let pendingSnippetToken = null;    // מזהה הבקשה הנוכחית - מונע בלבול בין "נגן שוב" מהיר לבין טעינה קודמת שעוד לא הסתיימה
+let scLoadToken = 0;
 
 function initSoundCloud(){
   if(!window.SC || !window.SC.Widget) { setTimeout(initSoundCloud, 200); return; }
@@ -518,7 +520,9 @@ function initSoundCloud(){
 
     // רק עכשיו, כשבאמת יש ניגון בפועל (לא רק שקראנו ל-play), מתחילים לספור
     // את זמן הקטע. זה מונע מצב שבו הטיימר "נשרף" בזמן שהטראק עדיין באפר.
-    if(pendingSnippetDuration !== null){
+    // בודקים גם שזו עדיין הבקשה העדכנית ביותר (ולא PLAY מאוחר של ניגון קודם/מבוטל,
+    // כמו כשלוחצים "נגן שוב" מהר לפני שהטעינה הקודמת הספיקה להתחיל).
+    if(pendingSnippetDuration !== null && pendingSnippetToken === scLoadToken){
       const dur = pendingSnippetDuration;
       pendingSnippetDuration = null;
       clearTimeout(checkTimer);
@@ -580,13 +584,18 @@ function playSongSnippet(){
 
   if(isSC){
     if(!scWidget || !scReady) return;
+    scLoadToken++; // כל קריאה חדשה (כולל "נגן שוב") מבטלת בקשות קודמות שעוד "באוויר"
+    const myToken = scLoadToken;
     pendingSnippetDuration = null;
     const trackUrl = `https://api.soundcloud.com/tracks/${currentSong.scId}`;
     const loadTrack = () => {
+      if(myToken !== scLoadToken) return; // בקשה ישנה יותר - מתעלמים
       pendingSnippetDuration = duration;
+      pendingSnippetToken = myToken;
       scWidget.load(trackUrl, {
         auto_play: true,
         callback: () => {
+          if(myToken !== scLoadToken) return;
           scWidget.seekTo(start * 1000);
           scWidget.play();
           // הטיימר בפועל נקבע ב-PLAY handler (ב-initSoundCloud), רק כשבאמת מתחיל ניגון
@@ -599,7 +608,9 @@ function playSongSnippet(){
     // (חלק מהטראקים לוקחים יותר זמן לטעון/לבאפר, בעיקר כשקופצים לשנייה מאוחרת בשיר)
     let scRetried = false;
     const checkScStuck = () => {
+      if(myToken !== scLoadToken) return; // כבר לא רלוונטי - הייתה בקשה חדשה יותר
       scWidget.isPaused((paused) => {
+        if(myToken !== scLoadToken) return;
         if(paused){
           if(!scRetried){
             scRetried = true;
@@ -656,6 +667,7 @@ function stopSnippet(){
   clearTimeout(checkTimer);
   clearTimeout(stuckTimer);
   pendingSnippetDuration = null;
+  scLoadToken++; // מבטל כל בקשת ניגון SoundCloud שעוד "באוויר"
   if(currentSong && currentSong.source === 'soundcloud'){
     if(scWidget && scWidget.pause) scWidget.pause();
   } else {
