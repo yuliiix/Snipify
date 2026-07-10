@@ -260,7 +260,7 @@
     <div class="attempt" id="attemptLabel">ניחוש 1 מתוך 6</div>
   </div>
 
-  <button class="btn-primary" id="startBtn">▶ הפעלה</button>
+  <button class="btn-primary" id="startBtn" disabled>טוען...</button>
 
   <div class="row">
     <button class="btn-secondary" id="playBtn" disabled>נגן שוב</button>
@@ -536,6 +536,17 @@ function initSoundCloud(){
   scWidget.bind(SC.Widget.Events.ERROR, () => { onPlayerError({ data: 'SC' }); });
 }
 initSoundCloud();
+
+// כפתור "הפעלה" נשאר נעול עד ששני מנועי הניגון (YouTube + SoundCloud) באמת מוכנים.
+// כך הלחיצה הראשונה על הכפתור תמיד קוראת ל-play/load ישירות מתוך הקליק עצמו,
+// בלי לחכות לטעינה א-סינכרונית אחריו - וזה מה שמונע מהדפדפן לחסום את הסאונד בפעם הראשונה.
+const readyPoll = setInterval(() => {
+  if(playerReady && scReady){
+    clearInterval(readyPoll);
+    els.startBtn.disabled = false;
+    els.startBtn.textContent = '▶ הפעלה';
+  }
+}, 150);
 
 function onPlayerStateChange(e){
   // 1 = מנגן, כל מצב אחר (מושהה/נעצר/נטען) לא נחשב "מנגן" מבחינת האנימציה
