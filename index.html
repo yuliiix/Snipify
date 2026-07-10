@@ -511,7 +511,11 @@ let scLoadToken = 0;
 function initSoundCloud(){
   if(!window.SC || !window.SC.Widget) { setTimeout(initSoundCloud, 200); return; }
   scWidget = SC.Widget('scPlayer');
-  scWidget.bind(SC.Widget.Events.READY, () => { scReady = true; });
+  scWidget.bind(SC.Widget.Events.READY, () => {
+    // ה-widget לפעמים מדווח READY רגע לפני שהוא באמת מסוגל לקבל פקודות בצורה
+    // אמינה (זה בדיוק ההסבר להפעלה ראשונה "שקטה"). ממתינים חצי שנייה נוספת ליתר ביטחון.
+    setTimeout(() => { scReady = true; }, 500);
+  });
   scWidget.bind(SC.Widget.Events.PLAY, () => {
     setWaveform(true);
     els.silentWarning.style.display = 'none';
