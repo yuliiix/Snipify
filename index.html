@@ -512,23 +512,36 @@ function playSongSnippet(){
   if(isSC){
     if(!scWidget || !scReady) return;
     const trackUrl = `https://api.soundcloud.com/tracks/${currentSong.scId}`;
-    scWidget.load(trackUrl, {
-      auto_play: true,
-      callback: () => {
-        scWidget.seekTo(start * 1000);
-        scWidget.play();
-      }
-    });
-
-    stuckTimer = setTimeout(() => {
-      scWidget.isPaused((paused) => {
-        if(paused){
-          setWaveform(false);
-          els.silentWarning.textContent = 'לא הצלחתי להשמיע מ-SoundCloud - נסו לרענן את הדף וללחוץ שוב.';
-          els.silentWarning.style.display = 'block';
+    const loadTrack = () => {
+      scWidget.load(trackUrl, {
+        auto_play: true,
+        callback: () => {
+          scWidget.seekTo(start * 1000);
+          scWidget.play();
         }
       });
-    }, 3000);
+    };
+    loadTrack();
+
+    // בודקים אם השיר באמת התחיל להתנגן - עם ניסיון חוזר שקט אחד לפני שמציגים שגיאה
+    // (חלק מהטראקים לוקחים יותר זמן לטעון/לבאפר, בעיקר כשקופצים לשנייה מאוחרת בשיר)
+    let scRetried = false;
+    const checkScStuck = () => {
+      scWidget.isPaused((paused) => {
+        if(paused){
+          if(!scRetried){
+            scRetried = true;
+            loadTrack();
+            stuckTimer = setTimeout(checkScStuck, 4000);
+          } else {
+            setWaveform(false);
+            els.silentWarning.textContent = 'לא הצלחתי להשמיע מ-SoundCloud - נסו לרענן את הדף וללחוץ שוב.';
+            els.silentWarning.style.display = 'block';
+          }
+        }
+      });
+    };
+    stuckTimer = setTimeout(checkScStuck, 4000);
 
     checkTimer = setInterval(() => {
       scWidget.getPosition((ms) => {
