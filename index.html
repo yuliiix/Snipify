@@ -608,12 +608,12 @@ function playSongSnippet(){
       pendingSnippetDuration = duration;
       pendingSnippetToken = myToken;
       scWidget.load(trackUrl, {
-        auto_play: true,
+        auto_play: false, // חשוב: לא נותנים ל-SoundCloud "להתפרץ" ולנגן משנייה 0 לפני שסיימנו לקפוץ ליעד
         callback: () => {
           if(myToken !== scLoadToken) return;
           scWidget.seekTo(start * 1000);
           scWidget.play();
-          // הטיימר בפועל נקבע ב-PLAY handler (ב-initSoundCloud), רק כשבאמת מתחיל ניגון
+          // עכשיו ה-PLAY היחיד שיירה יגיע רק אחרי שכבר קפצנו ליעד - בלי מירוץ
         }
       });
     };
@@ -870,6 +870,7 @@ els.guessInput.addEventListener('input', () => {
   renderSuggestions();
 });
 els.guessInput.addEventListener('blur', () => {
+  // דיליי קטן כדי לאפשר ללחיצה על הצעה (mousedown) לפעול קודם
   setTimeout(() => { els.suggestions.classList.remove('show'); }, 150);
 });
 els.nextBtn.addEventListener('click', startGame);
