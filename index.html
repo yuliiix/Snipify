@@ -457,18 +457,18 @@ function isCorrectGuess(guess, song){
 // לחסום את הסאונד (מדיניות autoplay).
 
 // SoundCloud Widget - אין פרסומות בהטמעה שלו, אז הוא נשאר מוסתר לגמרי
-// עקרון מרכזי: טוענים שיר פעם אחת בלבד. כל ניגון/חזרה = seekTo+play מיידיים,
-// בלי טעינה מחדש - כי כל טעינה היא סבב א-סינכרוני שיוצר מירוצים ותקלות.
-let scActiveSnippet = null;   // { token, duration } - הקטע שאמור להתנגן כרגע
+// עקרון מרכזי: טוענים שיר פעם אחת בלבד. כל ניגון/חזרה = seekTo+play מיידיים.
+// העצירה מבוססת *מיקום בשיר* (PLAY_PROGRESS) ולא שעון-עצר, כי אירועי PLAY של
+// SoundCloud יכולים להגיע לפני/אחרי ה-seek ולעוות את משך הקטע ששומעים בפועל.
+let scActiveSnippet = null;   // { token, startMs, endMs } - הקטע שאמור להתנגן כרגע
 let scLoadToken = 0;
 let scLoadedTrackId = null;   // איזה שיר טעון כרגע בנגן (כדי לא לטעון שוב לחינם)
+let scBackupTimer = null;     // רשת ביטחון: עצירה כפויה גם אם אירועי המיקום לא הגיעו
 
 function initSoundCloud(){
   if(!window.SC || !window.SC.Widget) { setTimeout(initSoundCloud, 200); return; }
   scWidget = SC.Widget('scPlayer');
   scWidget.bind(SC.Widget.Events.READY, () => {
-    // ה-widget לפעמים מדווח READY רגע לפני שהוא באמת מסוגל לקבל פקודות בצורה
-    // אמינה. ממתינים חצי שנייה נוספת ליתר ביטחון.
     setTimeout(() => { scReady = true; }, 500);
   });
   scWidget.bind(SC.Widget.Events.PLAY, () => {
@@ -476,19 +476,24 @@ function initSoundCloud(){
     els.silentWarning.style.display = 'none';
     errorStreak = 0;
     clearTimeout(stuckTimer); // השיר באמת מתנגן - מבטלים את בדיקת "התקיעות"
-
-    // מרגע שיש ניגון אמיתי - מכוונים את טיימר העצירה. לא "צורכים" את המידע
-    // (לא מאפסים אותו), כך שאם SoundCloud יורה PLAY נוסף באיחור (אחרי באפרינג),
-    // הטיימר פשוט יתכוון מחדש - ותמיד תהיה עצירה בסוף.
-    if(scActiveSnippet && scActiveSnippet.token === scLoadToken){
-      clearTimeout(checkTimer);
-      checkTimer = setTimeout(() => {
-        scWidget.pause();
-        setWaveform(false);
-      }, scActiveSnippet.duration * 1000);
-    } else {
+    if(!scActiveSnippet || scActiveSnippet.token !== scLoadToken){
       // PLAY שלא קשור לבקשה הנוכחית (ישן/מבוטל) - עוצרים אותו מיד
       scWidget.pause();
+    }
+  });
+  // הלב של מנגנון העצירה: SoundCloud מדווח לנו את המיקום הנוכחי תוך כדי ניגון.
+  // עוצרים בדיוק כשהמיקום עובר את קצה הקטע - לא משנה מתי הניגון באמת התחיל.
+  scWidget.bind(SC.Widget.Events.PLAY_PROGRESS, (e) => {
+    if(!scActiveSnippet || scActiveSnippet.token !== scLoadToken) return;
+    const pos = e.currentPosition;
+    if(pos >= scActiveSnippet.endMs){
+      scWidget.pause();
+      setWaveform(false);
+      scActiveSnippet = null;
+      clearTimeout(scBackupTimer);
+    } else if(pos < scActiveSnippet.startMs - 1500){
+      // הנגן התחיל משנייה 0 (או ממקום שגוי) במקום מנקודת הקפיצה - מתקנים מיד
+      scWidget.seekTo(scActiveSnippet.startMs);
     }
   });
   scWidget.bind(SC.Widget.Events.PAUSE, () => { setWaveform(false); });
@@ -536,63 +541,80 @@ function playSongSnippet(){
   clearInterval(checkTimer);
   clearTimeout(checkTimer);
   clearTimeout(stuckTimer);
+  clearTimeout(scBackupTimer);
   const duration = DURATIONS[attemptIndex];
   const start = currentSong.start;
-  const end = start + duration;
 
   els.stopBtn.disabled = false;
   els.silentWarning.style.display = 'none';
 
-  {
-    if(!scWidget || !scReady) return;
-    scLoadToken++; // כל קריאה חדשה (כולל "נגן שוב") מבטלת בקשות קודמות שעוד "באוויר"
-    const myToken = scLoadToken;
-    scActiveSnippet = { token: myToken, duration: duration };
-    const trackUrl = `https://api.soundcloud.com/tracks/${currentSong.scId}`;
+  if(!scWidget || !scReady) return;
+  scLoadToken++; // כל קריאה חדשה (כולל "נגן שוב") מבטלת בקשות קודמות שעוד "באוויר"
+  const myToken = scLoadToken;
+  // גבולות הקטע במיקום אמיתי בשיר (מילישניות) - זה מה שקובע מתי עוצרים
+  scActiveSnippet = { token: myToken, startMs: start * 1000, endMs: (start + duration) * 1000 };
+  const trackUrl = `https://api.soundcloud.com/tracks/${currentSong.scId}`;
 
-    if(scLoadedTrackId === currentSong.scId){
-      // השיר כבר טעון - פשוט קופצים ליעד ומנגנים, מיידית, בלי שום טעינה.
-      // זה המסלול של "נגן שוב"/"דלג" - מהיר, סינכרוני מהקליק, בלי מירוצים.
-      scWidget.seekTo(start * 1000);
-      scWidget.play();
-    } else {
-      // שיר חדש - טוענים פעם אחת בלבד (בלי auto_play כדי שלא יתחיל משנייה 0)
-      scLoadedTrackId = currentSong.scId;
-      scWidget.load(trackUrl, {
-        auto_play: false,
-        callback: () => {
-          if(myToken !== scLoadToken) return; // כבר הוחלף שיר/בקשה - לא מנגנים
-          scWidget.seekTo(start * 1000);
-          scWidget.play();
-        }
-      });
-    }
-
-    // אם אחרי כמה שניות עדיין לא קיבלנו PLAY אמיתי - מנסים שוב seek+play (בלי טעינה מחדש)
-    let scRetryCount = 0;
-    const MAX_SC_RETRIES = 2;
-    const checkScStuck = () => {
-      if(myToken !== scLoadToken) return; // כבר לא רלוונטי - הייתה בקשה חדשה יותר
-      if(scRetryCount < MAX_SC_RETRIES){
-        scRetryCount++;
+  if(scLoadedTrackId === currentSong.scId){
+    // השיר כבר טעון - פשוט קופצים ליעד ומנגנים, מיידית, בלי שום טעינה.
+    scWidget.seekTo(start * 1000);
+    scWidget.play();
+  } else {
+    // שיר חדש - טוענים פעם אחת בלבד (בלי auto_play כדי שלא יתחיל משנייה 0)
+    scLoadedTrackId = currentSong.scId;
+    scWidget.load(trackUrl, {
+      auto_play: false,
+      callback: () => {
+        if(myToken !== scLoadToken) return; // כבר הוחלף שיר/בקשה - לא מנגנים
         scWidget.seekTo(start * 1000);
         scWidget.play();
-        stuckTimer = setTimeout(checkScStuck, 4000);
-      } else {
-        setWaveform(false);
-        els.silentWarning.textContent = `לא הצלחתי להשמיע מ-SoundCloud את "${currentSong.title}" (${currentSong.artist}) - נסו לרענן את הדף וללחוץ שוב.`;
-        els.silentWarning.style.display = 'block';
       }
-    };
-    stuckTimer = setTimeout(checkScStuck, 4000);
-
+    });
   }
+
+  // רשת ביטחון: גם אם אירועי המיקום של SoundCloud לא הגיעו מסיבה כלשהי,
+  // עוצרים בכוח קצת אחרי שהקטע היה אמור להסתיים. עדיף לשמוע חצי שנייה
+  // עודפת נדירה מאשר שהשיר ימשיך בלי סוף.
+  scBackupTimer = setTimeout(() => {
+    if(myToken !== scLoadToken) return;
+    if(scActiveSnippet && scActiveSnippet.token === myToken){
+      scWidget.pause();
+      setWaveform(false);
+      scActiveSnippet = null;
+    }
+  }, (duration + 2.5) * 1000);
+
+  // אם אחרי כמה שניות עדיין לא קיבלנו PLAY אמיתי - מנסים שוב seek+play,
+  // ואם גם זה נכשל - עוברים אוטומטית לשיר אחר במקום להשאיר מסך תקוע
+  let scRetryCount = 0;
+  const MAX_SC_RETRIES = 2;
+  const checkScStuck = () => {
+    if(myToken !== scLoadToken) return; // כבר לא רלוונטי - הייתה בקשה חדשה יותר
+    if(scRetryCount < MAX_SC_RETRIES){
+      scRetryCount++;
+      scWidget.seekTo(start * 1000);
+      scWidget.play();
+      stuckTimer = setTimeout(checkScStuck, 4000);
+    } else {
+      // השיר הזה כנראה לא זמין (חסימה אזורית וכו') - עוברים לשיר אחר אוטומטית
+      setWaveform(false);
+      els.silentWarning.textContent = `"${currentSong.title}" לא זמין כרגע - עובר לשיר אחר...`;
+      els.silentWarning.style.display = 'block';
+      setTimeout(() => {
+        if(myToken !== scLoadToken) return;
+        els.startBtn.disabled = false;
+        startGame();
+      }, 1500);
+    }
+  };
+  stuckTimer = setTimeout(checkScStuck, 4000);
 }
 
 function stopSnippet(){
   clearInterval(checkTimer);
   clearTimeout(checkTimer);
   clearTimeout(stuckTimer);
+  clearTimeout(scBackupTimer);
   scActiveSnippet = null;
   scLoadToken++; // מבטל כל בקשת ניגון SoundCloud שעוד "באוויר"
   if(scWidget && scWidget.pause) scWidget.pause();
