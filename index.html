@@ -619,24 +619,25 @@ function playSongSnippet(){
     };
     loadTrack();
 
-    // אם אחרי 4 שניות עדיין לא קיבלנו אישור ניגון אמיתי (PLAY event) - השיר תקוע.
+    // אם אחרי כמה שניות עדיין לא קיבלנו אישור ניגון אמיתי (PLAY event) - השיר תקוע.
     // חשוב: לא בודקים את זה דרך isPaused() כי זו קריאה א-סינכרונית ל-SoundCloud
     // שהתבררה כלא אמינה מספיק (בדיוק כמו getPosition() קודם). אם הטיימר הזה בכלל
     // מגיע לפה - כבר בטוח שהניגון לא התחיל, כי PLAY האמיתי מבטל אותו ישירות.
-    let scRetried = false;
+    let scRetryCount = 0;
+    const MAX_SC_RETRIES = 2;
     const checkScStuck = () => {
       if(myToken !== scLoadToken) return; // כבר לא רלוונטי - הייתה בקשה חדשה יותר
-      if(!scRetried){
-        scRetried = true;
+      if(scRetryCount < MAX_SC_RETRIES){
+        scRetryCount++;
         loadTrack();
-        stuckTimer = setTimeout(checkScStuck, 4500);
+        stuckTimer = setTimeout(checkScStuck, 5000);
       } else {
         setWaveform(false);
         els.silentWarning.textContent = `לא הצלחתי להשמיע מ-SoundCloud את "${currentSong.title}" (${currentSong.artist}) - נסו לרענן את הדף וללחוץ שוב.`;
         els.silentWarning.style.display = 'block';
       }
     };
-    stuckTimer = setTimeout(checkScStuck, 4500);
+    stuckTimer = setTimeout(checkScStuck, 5000);
 
   } else {
     if(!player || !playerReady || !player.loadVideoById) return;
