@@ -455,8 +455,6 @@ function createPlayer(){
 loadYouTubeAPI(); // מתחילים לטעון מיד עם פתיחת הדף
 
 // SoundCloud Widget - אין פרסומות בהטמעה שלו, אז הוא נשאר מוסתר לגמרי
-let scSnippetEndMs = null; // היעד (במילישניות) לעצור בו את הקטע הנוכחי
-
 function initSoundCloud(){
   if(!window.SC || !window.SC.Widget) { setTimeout(initSoundCloud, 200); return; }
   scWidget = SC.Widget('scPlayer');
@@ -469,14 +467,6 @@ function initSoundCloud(){
   });
   scWidget.bind(SC.Widget.Events.PAUSE, () => { setWaveform(false); });
   scWidget.bind(SC.Widget.Events.ERROR, () => { onPlayerError({ data: 'SC' }); });
-  // האירוע הזה נדחף מהנגן עצמו בזמן ניגון - הרבה יותר אמין מלבקש getPosition שוב ושוב
-  scWidget.bind(SC.Widget.Events.PLAY_PROGRESS, (e) => {
-    if(scSnippetEndMs !== null && e.currentPosition >= scSnippetEndMs){
-      scWidget.pause();
-      setWaveform(false);
-      scSnippetEndMs = null;
-    }
-  });
 }
 initSoundCloud();
 
@@ -516,6 +506,7 @@ let stuckTimer = null;
 function playSongSnippet(){
   const isSC = currentSong.source === 'soundcloud';
   clearInterval(checkTimer);
+  clearTimeout(checkTimer);
   clearTimeout(stuckTimer);
   const duration = DURATIONS[attemptIndex];
   const start = currentSong.start;
@@ -526,7 +517,6 @@ function playSongSnippet(){
 
   if(isSC){
     if(!scWidget || !scReady) return;
-    scSnippetEndMs = null; // מבטלים יעד קודם עד שהניגון החדש באמת יתחיל
     const trackUrl = `https://api.soundcloud.com/tracks/${currentSong.scId}`;
     const loadTrack = () => {
       scWidget.load(trackUrl, {
@@ -534,7 +524,13 @@ function playSongSnippet(){
         callback: () => {
           scWidget.seekTo(start * 1000);
           scWidget.play();
-          scSnippetEndMs = end * 1000; // מכאן ה-PLAY_PROGRESS ידע מתי לעצור
+          // עוצרים בדיוק אחרי `duration` שניות מרגע ההפעלה - טיימר פשוט,
+          // לא תלוי באירועי progress של SoundCloud שהתבררו כלא מספיק מדויקים/אמינים לקטעים קצרים.
+          clearTimeout(checkTimer);
+          checkTimer = setTimeout(() => {
+            scWidget.pause();
+            setWaveform(false);
+          }, duration * 1000);
         }
       });
     };
@@ -598,8 +594,8 @@ function playSongSnippet(){
 
 function stopSnippet(){
   clearInterval(checkTimer);
+  clearTimeout(checkTimer);
   clearTimeout(stuckTimer);
-  scSnippetEndMs = null;
   if(currentSong && currentSong.source === 'soundcloud'){
     if(scWidget && scWidget.pause) scWidget.pause();
   } else {
