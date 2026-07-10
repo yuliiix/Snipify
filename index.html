@@ -230,7 +230,6 @@
     margin-bottom:14px;
   }
 
-  #player{ position:absolute; width:200px; height:200px; left:-9999px; top:-9999px; }
 
   .hint{
     text-align:center;
@@ -285,9 +284,8 @@
     <button class="btn-primary" id="nextBtn">שיר הבא</button>
   </div>
 
-  <div id="player"></div>
   <iframe id="scPlayer" src="https://w.soundcloud.com/player/?url=https%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F317594712&auto_play=false&show_artwork=false" style="position:absolute; left:-9999px; top:-9999px; width:200px; height:200px;" allow="autoplay; encrypted-media"></iframe>
-  <p class="hint">מקורות: YouTube ו-SoundCloud בלבד · שירים רשמיים שיצאו</p>
+  <p class="hint">מקורות: SoundCloud בלבד · ערוצים רשמיים · בלי פרסומות</p>
 </div>
 
 <script src="https://w.soundcloud.com/player/api.js"></script>
@@ -295,7 +293,7 @@
 
 /* =========================================================
    רשימת השירים — לערוך כאן בלבד.
-   videoId: המזהה מתוך קישור היוטיוב (youtube.com/watch?v=XXXXXXXX)
+   scId: מזהה הטראק ב-SoundCloud (מה-View Source של עמוד השיר)
    start:   שניה שבה מתחילים לנגן (מדלגים על אינטרו/שקט)
    ========================================================= */
 const SONGS = [
@@ -321,23 +319,19 @@ const SONGS = [
   { artist: "The Weeknd",           title: "Blinding Lights",          source: "soundcloud", scId: 718846078, start: 10 },
   { artist: "Justin Bieber",        title: "Sorry",                    source: "soundcloud", scId: 737719381, start: 10 },
   { artist: "Justin Timberlake",    title: "Can't Stop The Feeling!",  source: "soundcloud", scId: 262637985, start: 10 },
-  { artist: "Drake",                title: "God's Plan",               videoId: "xpVfcZ0ZcFM", start: 40 },
-  { artist: "Eminem",               title: "Lose Yourself",            videoId: "eRhEcKHU5LY", start: 40 },
-  { artist: "Gorillaz",             title: "Feel Good Inc.",           videoId: "HyHNuVaZJ-k", start: 40 },
-  { artist: "Radiohead",            title: "Creep",                    videoId: "XFkzRNyygfk", start: 40 },
-  { artist: "Nirvana",              title: "Smells Like Teen Spirit",  videoId: "hTWKbfoikeg", start: 40 },
-  { artist: "Pink Floyd",           title: "Another Brick In The Wall, Pt. 2", videoId: "HrxX9TBj2zY", start: 40 },
-  { artist: "Tame Impala",          title: "The Less I Know The Better", videoId: "sBzrzS1Ag_g", start: 40 },
+  { artist: "Drake",                title: "God's Plan",               source: "soundcloud", scId: 386265671, start: 10 },
+  { artist: "Eminem",               title: "Lose Yourself",            source: "soundcloud", scId: 256256957, start: 10 },
+  { artist: "Gorillaz",             title: "Feel Good Inc.",           source: "soundcloud", scId: 512243433, start: 10 },
+  { artist: "Radiohead",            title: "Creep",                    source: "soundcloud", scId: 265069081, start: 10 },
+  { artist: "Nirvana",              title: "Smells Like Teen Spirit",  source: "soundcloud", scId: 258954403, start: 10 },
+  { artist: "Pink Floyd",           title: "Another Brick In The Wall, Pt. 2", source: "soundcloud", scId: 255745452, start: 10 },
+  { artist: "Tame Impala",          title: "The Less I Know The Better", source: "soundcloud", scId: 256241332, start: 10 },
   { artist: "Juice WRLD",           title: "Lucid Dreams",             source: "soundcloud", scId: 328259811, start: 10 },
   { artist: "Sewerperson",          title: "what if (sorrowbringer)",  source: "soundcloud", scId: 1990449647, start: 10 },
 
   // --- הרחבה שנייה: עוד שיר/שניים לכל אמן ---
   { artist: "Queen",                title: "Don't Stop Me Now",        source: "soundcloud", scId: 252516215, start: 10 },
-  { artist: "Ed Sheeran",           title: "Perfect",                  videoId: "2Vv-BfVoq4g", start: 40 },
-  { artist: "Adele",                title: "Hello",                    videoId: "YQHsXMglC9A", start: 40 },
-  { artist: "Coldplay",             title: "Yellow",                   videoId: "yKNxeF4KMsY", start: 40 },
   { artist: "Kanye West",           title: "Gold Digger",              source: "soundcloud", scId: 255766412, start: 10 },
-  { artist: "Travis Scott",         title: "goosebumps",               videoId: "Dst9gZkq1a8", start: 40 },
   { artist: "Playboi Carti",        title: "Location",                 source: "soundcloud", scId: 316331104, start: 10 },
   { artist: "Lil Uzi Vert",         title: "Money Longer",             source: "soundcloud", scId: 245673410, start: 10 },
   { artist: "Tyler, The Creator",   title: "See You Again",            source: "soundcloud", scId: 333232609, start: 10 },
@@ -345,29 +339,22 @@ const SONGS = [
   { artist: "Ken Carson",           title: "Fighting My Demons",       source: "soundcloud", scId: 1638569946, start: 10 },
   { artist: "Rihanna",              title: "Diamonds",                 source: "soundcloud", scId: 718250533, start: 10 },
   { artist: "Rihanna",              title: "Work",                     source: "soundcloud", scId: 255769417, start: 10 },
-  { artist: "Black Eyed Peas",      title: "Where Is The Love?",       videoId: "WpYeekQkAdc", start: 40 },
-  { artist: "Childish Gambino",     title: "Redbone",                  videoId: "k49I5m1J6Is", start: 40 },
   { artist: "Kendrick Lamar",       title: "Not Like Us",              source: "soundcloud", scId: 1814709189, start: 10 },
   { artist: "Lady Gaga",            title: "Poker Face",               source: "soundcloud", scId: 255905673, start: 10 },
   { artist: "50 Cent",              title: "Candy Shop",               source: "soundcloud", scId: 255894115, start: 10 },
   { artist: "The Weeknd",           title: "Starboy",                  source: "soundcloud", scId: 284056452, start: 10 },
-  { artist: "Justin Bieber",        title: "Baby",                     videoId: "kffacxfA7G4", start: 40 },
-  { artist: "Justin Timberlake",    title: "SexyBack",                 videoId: "3gOHvDP_vCs", start: 40 },
-  { artist: "Drake",                title: "Hotline Bling",            videoId: "d0XEvGF7sb0", start: 40 },
-  { artist: "Eminem",               title: "Without Me",               videoId: "YVkUvmDQ3HY", start: 40 },
-  { artist: "Gorillaz",             title: "Clint Eastwood",           videoId: "1V_xRb0x9aw", start: 40 },
-  { artist: "Radiohead",            title: "Karma Police",             videoId: "1uYWYWPc9HU", start: 40 },
-  { artist: "Nirvana",              title: "Come As You Are",          videoId: "vabnZ9-ex7o", start: 40 },
-  { artist: "Pink Floyd",           title: "Wish You Were Here",       videoId: "K6qj09OHvjw", start: 40 },
-  { artist: "Tame Impala",          title: "Let It Happen",            videoId: "pFptt7Cargc", start: 40 },
+  { artist: "Eminem",               title: "Without Me",               source: "soundcloud", scId: 256257257, start: 10 },
+  { artist: "Gorillaz",             title: "Clint Eastwood",           source: "soundcloud", scId: 257964144, start: 10 },
+  { artist: "Radiohead",            title: "Karma Police",             source: "soundcloud", scId: 265069063, start: 10 },
+  { artist: "Nirvana",              title: "Come As You Are",          source: "soundcloud", scId: 258954353, start: 10 },
+  { artist: "Pink Floyd",           title: "Wish You Were Here",       source: "soundcloud", scId: 255745371, start: 5 },
+  { artist: "Tame Impala",          title: "Let It Happen",            source: "soundcloud", scId: 256241372, start: 10 },
   { artist: "Juice WRLD",           title: "All Girls Are The Same",   source: "soundcloud", scId: 373180994, start: 10 },
   { artist: "Sewerperson",          title: "im cold (sorrowbringer)",  source: "soundcloud", scId: 1798511755, start: 10 },
 ];
 
 const DURATIONS = [0.5, 1, 2, 4, 8, 16]; // סולם הזמנים, כמו במשחק המקורי
 
-let player = null;
-let apiReady = false;
 let currentSong = null;
 let attemptIndex = 0; // 0-based
 let checkTimer = null;
@@ -468,40 +455,6 @@ function isCorrectGuess(guess, song){
 // חשוב: הנגן נוצר כבר בטעינת הדף (לא בלחיצה), כדי שכל הפעלה בפועל
 // תיקרא ישירות מתוך אירוע הקליק של המשתמש - זה מה שמונע מהדפדפן
 // לחסום את הסאונד (מדיניות autoplay).
-let playerReady = false;
-let scReady = false;
-let scWidget = null;
-
-function loadYouTubeAPI(){
-  if(window.YT && window.YT.Player){ apiReady = true; createPlayer(); return; }
-  const tag = document.createElement('script');
-  tag.src = "https://www.youtube.com/iframe_api";
-  document.body.appendChild(tag);
-}
-window.onYouTubeIframeAPIReady = function(){
-  apiReady = true;
-  createPlayer();
-};
-
-function createPlayer(){
-  if(player) return;
-  player = new YT.Player('player', {
-    height: '200',
-    width: '200',
-    videoId: SONGS.find(s => s.source !== 'soundcloud').videoId,
-    playerVars: { autoplay: 0, controls: 0, disablekb: 1 },
-    events: {
-      onReady: (e) => {
-        e.target.unMute();
-        e.target.setVolume(100);
-        playerReady = true;
-      },
-      onStateChange: onPlayerStateChange,
-      onError: onPlayerError
-    }
-  });
-}
-loadYouTubeAPI(); // מתחילים לטעון מיד עם פתיחת הדף
 
 // SoundCloud Widget - אין פרסומות בהטמעה שלו, אז הוא נשאר מוסתר לגמרי
 // עקרון מרכזי: טוענים שיר פעם אחת בלבד. כל ניגון/חזרה = seekTo+play מיידיים,
@@ -547,21 +500,13 @@ initSoundCloud();
 // כך הלחיצה הראשונה על הכפתור תמיד קוראת ל-play/load ישירות מתוך הקליק עצמו,
 // בלי לחכות לטעינה א-סינכרונית אחריו - וזה מה שמונע מהדפדפן לחסום את הסאונד בפעם הראשונה.
 const readyPoll = setInterval(() => {
-  if(playerReady && scReady){
+  if(scReady){
     clearInterval(readyPoll);
     els.startBtn.disabled = false;
     els.startBtn.textContent = '▶ הפעלה';
   }
 }, 150);
 
-function onPlayerStateChange(e){
-  // 1 = מנגן, כל מצב אחר (מושהה/נעצר/נטען) לא נחשב "מנגן" מבחינת האנימציה
-  setWaveform(e.data === 1);
-  if(e.data === 1){
-    els.silentWarning.style.display = 'none';
-    errorStreak = 0;
-  }
-}
 
 let errorStreak = 0;
 
@@ -588,7 +533,6 @@ let stuckTimer = null;
 
 // מנגן קטע - נקרא תמיד ישירות מתוך handler של לחיצה אמיתית (start/play/skip)
 function playSongSnippet(){
-  const isSC = currentSong.source === 'soundcloud';
   clearInterval(checkTimer);
   clearTimeout(checkTimer);
   clearTimeout(stuckTimer);
@@ -599,7 +543,7 @@ function playSongSnippet(){
   els.stopBtn.disabled = false;
   els.silentWarning.style.display = 'none';
 
-  if(isSC){
+  {
     if(!scWidget || !scReady) return;
     scLoadToken++; // כל קריאה חדשה (כולל "נגן שוב") מבטלת בקשות קודמות שעוד "באוויר"
     const myToken = scLoadToken;
@@ -642,39 +586,6 @@ function playSongSnippet(){
     };
     stuckTimer = setTimeout(checkScStuck, 4000);
 
-  } else {
-    if(!player || !playerReady || !player.loadVideoById) return;
-    player.unMute();
-    player.setVolume(100);
-    player.loadVideoById({ videoId: currentSong.videoId, startSeconds: start });
-
-    // אם אחרי 3 שניות עדיין לא ממש "מנגן" - ננסה שוב פעם אחת בשקט
-    // (זו לפעמים תקלה חד-פעמית של הפקודה הראשונה ליוטיוב, לא בעיה אמיתית)
-    let retriedOnce = false;
-    const checkStuck = () => {
-      const state = player.getPlayerState ? player.getPlayerState() : null;
-      if(state !== 1){
-        if(!retriedOnce){
-          retriedOnce = true;
-          player.loadVideoById({ videoId: currentSong.videoId, startSeconds: start });
-          stuckTimer = setTimeout(checkStuck, 3000);
-        } else {
-          setWaveform(false);
-          els.silentWarning.textContent = 'לא הצלחתי להשמיע - נסו לרענן את הדף וללחוץ שוב על הפעלה, או לוודא שהעוצמה בדפדפן/במחשב לא באפס.';
-          els.silentWarning.style.display = 'block';
-        }
-      }
-    };
-    stuckTimer = setTimeout(checkStuck, 3000);
-
-    checkTimer = setInterval(() => {
-      const t = player.getCurrentTime ? player.getCurrentTime() : 0;
-      if(t >= end - 0.05){
-        player.pauseVideo();
-        setWaveform(false);
-        clearInterval(checkTimer);
-      }
-    }, 50);
   }
 }
 
@@ -684,11 +595,7 @@ function stopSnippet(){
   clearTimeout(stuckTimer);
   scActiveSnippet = null;
   scLoadToken++; // מבטל כל בקשת ניגון SoundCloud שעוד "באוויר"
-  if(currentSong && currentSong.source === 'soundcloud'){
-    if(scWidget && scWidget.pause) scWidget.pause();
-  } else {
-    if(player && player.pauseVideo) player.pauseVideo();
-  }
+  if(scWidget && scWidget.pause) scWidget.pause();
   setWaveform(false);
 }
 
@@ -725,17 +632,14 @@ function startGame(){
   els.startBtn.disabled = true;
   updateStatus();
 
-  const isSC = currentSong.source === 'soundcloud';
-  const ready = isSC ? scReady : playerReady;
-
-  if(ready){
+  if(scReady){
     playSongSnippet(); // נקרא ישירות מתוך לחיצת "הפעלה" של המשתמש
   } else {
     // הנגן הרלוונטי עדיין נטען - ננסה שוב ברגע שהוא מוכן
     els.silentWarning.textContent = 'הנגן עדיין נטען, רגע אחד ומנסים שוב...';
     els.silentWarning.style.display = 'block';
     const waitForPlayer = setInterval(() => {
-      const nowReady = isSC ? scReady : playerReady;
+      const nowReady = scReady;
       if(nowReady){
         clearInterval(waitForPlayer);
         els.silentWarning.style.display = 'none';
@@ -829,9 +733,7 @@ function endGame(won){
 
   els.revealArtist.textContent = currentSong.artist;
   els.revealTitle.textContent = currentSong.title;
-  els.revealLink.href = currentSong.source === 'soundcloud'
-    ? `https://api.soundcloud.com/tracks/${currentSong.scId}`
-    : `https://www.youtube.com/watch?v=${currentSong.videoId}`;
+  els.revealLink.href = `https://api.soundcloud.com/tracks/${currentSong.scId}`;
   els.reveal.classList.add('show');
 
   stopSnippet();
