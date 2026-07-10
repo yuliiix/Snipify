@@ -286,7 +286,7 @@
   </div>
 
   <div id="player"></div>
-  <iframe id="scPlayer" src="https://w.soundcloud.com/player/?url=https%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F317594712&auto_play=false&show_artwork=false" style="position:absolute; left:-9999px; top:-9999px; width:200px; height:200px;" allow="autoplay"></iframe>
+  <iframe id="scPlayer" src="https://w.soundcloud.com/player/?url=https%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F317594712&auto_play=false&show_artwork=false" style="position:absolute; left:-9999px; top:-9999px; width:200px; height:200px;" allow="autoplay; encrypted-media"></iframe>
   <p class="hint">מקורות: YouTube ו-SoundCloud בלבד · שירים רשמיים שיצאו</p>
 </div>
 
@@ -870,7 +870,6 @@ els.guessInput.addEventListener('input', () => {
   renderSuggestions();
 });
 els.guessInput.addEventListener('blur', () => {
-  // דיליי קטן כדי לאפשר ללחיצה על הצעה (mousedown) לפעול קודם
   setTimeout(() => { els.suggestions.classList.remove('show'); }, 150);
 });
 els.nextBtn.addEventListener('click', startGame);
