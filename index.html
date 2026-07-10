@@ -599,13 +599,6 @@ function playSongSnippet(){
     const myToken = scLoadToken;
     pendingSnippetDuration = null;
     const trackUrl = `https://api.soundcloud.com/tracks/${currentSong.scId}`;
-
-    // "מפעילים" את הנגן ישירות ומיידית מתוך הקליק עצמו (בלי לחכות לשום async) -
-    // זה מה שמשכנע את הדפדפן שיש כאן אינטראקציה אמיתית של המשתמש ופותח את הסאונד.
-    // בלי זה, בהפעלה הראשונה אי-פעם בעמוד, הבקשה ל-load() (א-סינכרונית) מגיעה
-    // "מאוחר מדי" מבחינת הדפדפן ונחסמת בשקט - וזה בדיוק מה שקרה.
-    if(scWidget.play) scWidget.play();
-
     const loadTrack = () => {
       if(myToken !== scLoadToken) return; // בקשה ישנה יותר - מתעלמים
       pendingSnippetDuration = duration;
