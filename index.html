@@ -599,6 +599,13 @@ function playSongSnippet(){
     const myToken = scLoadToken;
     pendingSnippetDuration = null;
     const trackUrl = `https://api.soundcloud.com/tracks/${currentSong.scId}`;
+
+    // "מפעילים" את הנגן ישירות ומיידית מתוך הקליק עצמו (בלי לחכות לשום async) -
+    // זה מה שמשכנע את הדפדפן שיש כאן אינטראקציה אמיתית של המשתמש ופותח את הסאונד.
+    // בלי זה, בהפעלה הראשונה אי-פעם בעמוד, הבקשה ל-load() (א-סינכרונית) מגיעה
+    // "מאוחר מדי" מבחינת הדפדפן ונחסמת בשקט - וזה בדיוק מה שקרה.
+    if(scWidget.play) scWidget.play();
+
     const loadTrack = () => {
       if(myToken !== scLoadToken) return; // בקשה ישנה יותר - מתעלמים
       pendingSnippetDuration = duration;
@@ -615,27 +622,24 @@ function playSongSnippet(){
     };
     loadTrack();
 
-    // בודקים אם השיר באמת התחיל להתנגן - עם ניסיון חוזר שקט אחד לפני שמציגים שגיאה
-    // (חלק מהטראקים לוקחים יותר זמן לטעון/לבאפר, בעיקר כשקופצים לשנייה מאוחרת בשיר)
+    // אם אחרי 4 שניות עדיין לא קיבלנו אישור ניגון אמיתי (PLAY event) - השיר תקוע.
+    // חשוב: לא בודקים את זה דרך isPaused() כי זו קריאה א-סינכרונית ל-SoundCloud
+    // שהתבררה כלא אמינה מספיק (בדיוק כמו getPosition() קודם). אם הטיימר הזה בכלל
+    // מגיע לפה - כבר בטוח שהניגון לא התחיל, כי PLAY האמיתי מבטל אותו ישירות.
     let scRetried = false;
     const checkScStuck = () => {
       if(myToken !== scLoadToken) return; // כבר לא רלוונטי - הייתה בקשה חדשה יותר
-      scWidget.isPaused((paused) => {
-        if(myToken !== scLoadToken) return;
-        if(paused){
-          if(!scRetried){
-            scRetried = true;
-            loadTrack();
-            stuckTimer = setTimeout(checkScStuck, 4000);
-          } else {
-            setWaveform(false);
-            els.silentWarning.textContent = 'לא הצלחתי להשמיע מ-SoundCloud - נסו לרענן את הדף וללחוץ שוב.';
-            els.silentWarning.style.display = 'block';
-          }
-        }
-      });
+      if(!scRetried){
+        scRetried = true;
+        loadTrack();
+        stuckTimer = setTimeout(checkScStuck, 4500);
+      } else {
+        setWaveform(false);
+        els.silentWarning.textContent = `לא הצלחתי להשמיע מ-SoundCloud את "${currentSong.title}" (${currentSong.artist}) - נסו לרענן את הדף וללחוץ שוב.`;
+        els.silentWarning.style.display = 'block';
+      }
     };
-    stuckTimer = setTimeout(checkScStuck, 4000);
+    stuckTimer = setTimeout(checkScStuck, 4500);
 
   } else {
     if(!player || !playerReady || !player.loadVideoById) return;
