@@ -436,6 +436,30 @@ function pickSong(){
   return SONGS[idx];
 }
 
+// כמו במשחקים אמיתיים (Bandle/Heardle): "מציצים" מראש מה השיר הבא וטוענים
+// אותו לנגן עוד לפני שהמשתמש לחץ - כך שהלחיצה עצמה רק מפעילה ניגון מיידי,
+// בלי טעינה א-סינכרונית באמצע. זה קריטי במיוחד באייפון, שחוסם סאונד שלא
+// מופעל ישירות מתוך מגע של המשתמש.
+let peekedSong = null;
+
+function peekNextSong(){
+  if(!peekedSong) peekedSong = pickSong();
+  return peekedSong;
+}
+
+function takeNextSong(){
+  const s = peekNextSong();
+  peekedSong = null;
+  return s;
+}
+
+function preloadSong(song){
+  if(!scWidget || !scReady) return;
+  if(scLoadedTrackId === song.scId) return; // כבר טעון
+  scLoadedTrackId = song.scId;
+  scWidget.load(`https://api.soundcloud.com/tracks/${song.scId}`, { auto_play: false });
+}
+
 function normalize(str){
   return str
     .toLowerCase()
@@ -460,7 +484,7 @@ function isCorrectGuess(guess, song){
 // עקרון מרכזי: טוענים שיר פעם אחת בלבד. כל ניגון/חזרה = seekTo+play מיידיים.
 // העצירה מבוססת *מיקום בשיר* (PLAY_PROGRESS) ולא שעון-עצר, כי אירועי PLAY של
 // SoundCloud יכולים להגיע לפני/אחרי ה-seek ולעוות את משך הקטע ששומעים בפועל.
-let scActiveSnippet = null;   // { token, startMs, endMs } - הקטע שאמור להתנגן כרגע
+let scActiveSnippet = null;   // { token, endMs } - הקטע שאמור להתנגן כרגע
 let scLoadToken = 0;
 let scLoadedTrackId = null;   // איזה שיר טעון כרגע בנגן (כדי לא לטעון שוב לחינם)
 let scBackupTimer = null;     // רשת ביטחון: עצירה כפויה גם אם אירועי המיקום לא הגיעו
@@ -485,15 +509,11 @@ function initSoundCloud(){
   // עוצרים בדיוק כשהמיקום עובר את קצה הקטע - לא משנה מתי הניגון באמת התחיל.
   scWidget.bind(SC.Widget.Events.PLAY_PROGRESS, (e) => {
     if(!scActiveSnippet || scActiveSnippet.token !== scLoadToken) return;
-    const pos = e.currentPosition;
-    if(pos >= scActiveSnippet.endMs){
+    if(e.currentPosition >= scActiveSnippet.endMs){
       scWidget.pause();
       setWaveform(false);
       scActiveSnippet = null;
       clearTimeout(scBackupTimer);
-    } else if(pos < scActiveSnippet.startMs - 1500){
-      // הנגן התחיל משנייה 0 (או ממקום שגוי) במקום מנקודת הקפיצה - מתקנים מיד
-      scWidget.seekTo(scActiveSnippet.startMs);
     }
   });
   scWidget.bind(SC.Widget.Events.PAUSE, () => { setWaveform(false); });
@@ -507,6 +527,7 @@ initSoundCloud();
 const readyPoll = setInterval(() => {
   if(scReady){
     clearInterval(readyPoll);
+    preloadSong(peekNextSong()); // השיר הראשון נטען מראש - הלחיצה הראשונה תנגן מיידית
     els.startBtn.disabled = false;
     els.startBtn.textContent = '▶ הפעלה';
   }
@@ -543,7 +564,6 @@ function playSongSnippet(){
   clearTimeout(stuckTimer);
   clearTimeout(scBackupTimer);
   const duration = DURATIONS[attemptIndex];
-  const start = currentSong.start;
 
   els.stopBtn.disabled = false;
   els.silentWarning.style.display = 'none';
@@ -551,30 +571,30 @@ function playSongSnippet(){
   if(!scWidget || !scReady) return;
   scLoadToken++; // כל קריאה חדשה (כולל "נגן שוב") מבטלת בקשות קודמות שעוד "באוויר"
   const myToken = scLoadToken;
-  // גבולות הקטע במיקום אמיתי בשיר (מילישניות) - זה מה שקובע מתי עוצרים
-  scActiveSnippet = { token: myToken, startMs: start * 1000, endMs: (start + duration) * 1000 };
+  // כמו Bandle/Heardle: הקטע תמיד מתחיל מתחילת השיר (מיקום 0).
+  // תחילת השיר תמיד טעונה (buffered) ראשונה - אז אין קפיצות לאזורים לא טעונים,
+  // שהיו הגורם גם ל"שקט למרות שנראה מנגן" וגם לאורכי קטע לא עקביים.
+  scActiveSnippet = { token: myToken, endMs: duration * 1000 };
   const trackUrl = `https://api.soundcloud.com/tracks/${currentSong.scId}`;
 
   if(scLoadedTrackId === currentSong.scId){
-    // השיר כבר טעון - פשוט קופצים ליעד ומנגנים, מיידית, בלי שום טעינה.
-    scWidget.seekTo(start * 1000);
+    // השיר כבר טעון מראש - חוזרים להתחלה ומנגנים, מיידית וישירות מהקליק.
+    scWidget.seekTo(0);
     scWidget.play();
   } else {
-    // שיר חדש - טוענים פעם אחת בלבד (בלי auto_play כדי שלא יתחיל משנייה 0)
+    // fallback - לא אמור לקרות בזרימה הרגילה (הכל נטען מראש), אבל ליתר ביטחון
     scLoadedTrackId = currentSong.scId;
     scWidget.load(trackUrl, {
       auto_play: false,
       callback: () => {
-        if(myToken !== scLoadToken) return; // כבר הוחלף שיר/בקשה - לא מנגנים
-        scWidget.seekTo(start * 1000);
+        if(myToken !== scLoadToken) return;
         scWidget.play();
       }
     });
   }
 
   // רשת ביטחון: גם אם אירועי המיקום של SoundCloud לא הגיעו מסיבה כלשהי,
-  // עוצרים בכוח קצת אחרי שהקטע היה אמור להסתיים. עדיף לשמוע חצי שנייה
-  // עודפת נדירה מאשר שהשיר ימשיך בלי סוף.
+  // עוצרים בכוח קצת אחרי שהקטע היה אמור להסתיים.
   scBackupTimer = setTimeout(() => {
     if(myToken !== scLoadToken) return;
     if(scActiveSnippet && scActiveSnippet.token === myToken){
@@ -584,7 +604,7 @@ function playSongSnippet(){
     }
   }, (duration + 2.5) * 1000);
 
-  // אם אחרי כמה שניות עדיין לא קיבלנו PLAY אמיתי - מנסים שוב seek+play,
+  // אם אחרי כמה שניות עדיין לא קיבלנו PLAY אמיתי - מנסים שוב,
   // ואם גם זה נכשל - עוברים אוטומטית לשיר אחר במקום להשאיר מסך תקוע
   let scRetryCount = 0;
   const MAX_SC_RETRIES = 2;
@@ -592,7 +612,7 @@ function playSongSnippet(){
     if(myToken !== scLoadToken) return; // כבר לא רלוונטי - הייתה בקשה חדשה יותר
     if(scRetryCount < MAX_SC_RETRIES){
       scRetryCount++;
-      scWidget.seekTo(start * 1000);
+      scWidget.seekTo(0);
       scWidget.play();
       stuckTimer = setTimeout(checkScStuck, 4000);
     } else {
@@ -636,7 +656,7 @@ function updateStatus(){
 }
 
 function startGame(){
-  currentSong = pickSong();
+  currentSong = takeNextSong();
   attemptIndex = 0;
   gameOver = false;
   els.feedback.className = 'feedback';
@@ -759,6 +779,9 @@ function endGame(won){
   els.reveal.classList.add('show');
 
   stopSnippet();
+
+  // טוענים מראש את השיר הבא - כשילחצו "שיר הבא" הניגון יהיה מיידי וישיר מהקליק
+  setTimeout(() => { preloadSong(peekNextSong()); }, 300);
 }
 
 // ---------- Event bindings ----------
