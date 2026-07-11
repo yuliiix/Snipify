@@ -61,6 +61,25 @@
     gap:6px;
     margin-bottom:20px;
   }
+  .mode-tabs{
+    display:flex;
+    gap:8px;
+    margin-bottom:18px;
+  }
+  .mode-tab{
+    flex:1;
+    padding:10px;
+    background:var(--bg);
+    border:1px solid var(--line);
+    color:var(--text-dim);
+    font-size:14px;
+    border-radius:10px;
+  }
+  .mode-tab.active{
+    color:var(--text);
+    border-color:var(--accent);
+    background:rgba(139,92,246,0.12);
+  }
   .ladder .seg{
     flex:1;
     height:6px;
@@ -245,6 +264,11 @@
   <h1>Snip<span>ify</span></h1>
   <p class="subtitle">האזינו לקטע קצר ונחשו את השיר. כל דילוג מאריך את הקטע — ובכל פתיחה מגיע שיר אחר.</p>
 
+  <div class="mode-tabs">
+    <button class="mode-tab active" id="dailyTab">🗓 יומי</button>
+    <button class="mode-tab" id="unlimitedTab">∞ ללא הגבלה</button>
+  </div>
+
   <div class="ladder" id="ladder"></div>
 
   <div class="waveform" id="waveform">
@@ -295,60 +319,637 @@
    start:   שניה שבה מתחילים לנגן (מדלגים על אינטרו/שקט)
    ========================================================= */
 const SONGS = [
-  { artist: "Queen",            title: "Bohemian Rhapsody",   source: "soundcloud", scId: 253166273, start: 10 },
-  { artist: "Ed Sheeran",       title: "Shape of You",        source: "soundcloud", scId: 301161123, start: 10 },
-  { artist: "Adele",            title: "Rolling in the Deep", source: "soundcloud", scId: 254407925, start: 10 },
-  { artist: "Coldplay",         title: "Viva la Vida",        source: "soundcloud", scId: 255770309, start: 10 },
-
-  // --- נוספו לפי בקשת יולי ---
-  { artist: "Kanye West",           title: "Stronger",                 source: "soundcloud", scId: 255766528, start: 10 },
-  { artist: "Travis Scott",         title: "SICKO MODE",               source: "soundcloud", scId: 480200517, start: 10 },
-  { artist: "Playboi Carti",        title: "Magnolia",                 source: "soundcloud", scId: 317594712, start: 10 },
-  { artist: "Lil Uzi Vert",         title: "XO Tour Llif3",            source: "soundcloud", scId: 313999085, start: 10 },
-  { artist: "Tyler, The Creator",   title: "EARFQUAKE",                source: "soundcloud", scId: 621622326, start: 10 },
-  { artist: "Yeat",                 title: "Talk",                     source: "soundcloud", scId: 1333635664, start: 10 },
-  { artist: "Ken Carson",           title: "Succubus",                 source: "soundcloud", scId: 1638569793, start: 10 },
-  { artist: "Rihanna",              title: "Umbrella",                 source: "soundcloud", scId: 255769529, start: 10 },
-  { artist: "Black Eyed Peas",      title: "I Gotta Feeling",          source: "soundcloud", scId: 253634744, start: 10 },
-  { artist: "Childish Gambino",     title: "This Is America",          source: "soundcloud", scId: 439450881, start: 10 },
-  { artist: "Kendrick Lamar",       title: "HUMBLE.",                  source: "soundcloud", scId: 315137496, start: 10 },
-  { artist: "Lady Gaga",            title: "Bad Romance",              source: "soundcloud", scId: 255899647, start: 10 },
-  { artist: "50 Cent",              title: "In Da Club",               source: "soundcloud", scId: 255894007, start: 10 },
-  { artist: "The Weeknd",           title: "Blinding Lights",          source: "soundcloud", scId: 718846078, start: 10 },
-  { artist: "Justin Bieber",        title: "Sorry",                    source: "soundcloud", scId: 737719381, start: 10 },
-  { artist: "Justin Timberlake",    title: "Can't Stop The Feeling!",  source: "soundcloud", scId: 262637985, start: 10 },
-  { artist: "Drake",                title: "God's Plan",               source: "soundcloud", scId: 386265671, start: 10 },
-  { artist: "Eminem",               title: "Lose Yourself",            source: "soundcloud", scId: 256256957, start: 10 },
-  { artist: "Gorillaz",             title: "Feel Good Inc.",           source: "soundcloud", scId: 512243433, start: 10 },
-  { artist: "Radiohead",            title: "Creep",                    source: "soundcloud", scId: 265069081, start: 10 },
-  { artist: "Nirvana",              title: "Smells Like Teen Spirit",  source: "soundcloud", scId: 258954403, start: 10 },
-  { artist: "Pink Floyd",           title: "Another Brick In The Wall, Pt. 2", source: "soundcloud", scId: 255745452, start: 10 },
-  { artist: "Tame Impala",          title: "The Less I Know The Better", source: "soundcloud", scId: 256241332, start: 10 },
-  { artist: "Juice WRLD",           title: "Lucid Dreams",             source: "soundcloud", scId: 328259811, start: 10 },
-  { artist: "Sewerperson",          title: "what if (sorrowbringer)",  source: "soundcloud", scId: 1990449647, start: 10 },
-
-  // --- הרחבה שנייה: עוד שיר/שניים לכל אמן ---
-  { artist: "Queen",                title: "Don't Stop Me Now",        source: "soundcloud", scId: 252516215, start: 10 },
-  { artist: "Kanye West",           title: "Gold Digger",              source: "soundcloud", scId: 255766412, start: 10 },
-  { artist: "Playboi Carti",        title: "Location",                 source: "soundcloud", scId: 316331104, start: 10 },
-  { artist: "Lil Uzi Vert",         title: "Money Longer",             source: "soundcloud", scId: 245673410, start: 10 },
-  { artist: "Tyler, The Creator",   title: "See You Again",            source: "soundcloud", scId: 333232609, start: 10 },
-  { artist: "Yeat",                 title: "Rich Minion",              source: "soundcloud", scId: 1298151202, start: 10 },
-  { artist: "Ken Carson",           title: "Fighting My Demons",       source: "soundcloud", scId: 1638569946, start: 10 },
-  { artist: "Rihanna",              title: "Diamonds",                 source: "soundcloud", scId: 718250533, start: 10 },
-  { artist: "Rihanna",              title: "Work",                     source: "soundcloud", scId: 255769417, start: 10 },
-  { artist: "Kendrick Lamar",       title: "Not Like Us",              source: "soundcloud", scId: 1814709189, start: 10 },
-  { artist: "Lady Gaga",            title: "Poker Face",               source: "soundcloud", scId: 255905673, start: 10 },
-  { artist: "50 Cent",              title: "Candy Shop",               source: "soundcloud", scId: 255894115, start: 10 },
-  { artist: "The Weeknd",           title: "Starboy",                  source: "soundcloud", scId: 284056452, start: 10 },
-  { artist: "Eminem",               title: "Without Me",               source: "soundcloud", scId: 256257257, start: 10 },
-  { artist: "Gorillaz",             title: "Clint Eastwood",           source: "soundcloud", scId: 257964144, start: 10 },
-  { artist: "Radiohead",            title: "Karma Police",             source: "soundcloud", scId: 265069063, start: 10 },
-  { artist: "Nirvana",              title: "Come As You Are",          source: "soundcloud", scId: 258954353, start: 10 },
-  { artist: "Pink Floyd",           title: "Wish You Were Here",       source: "soundcloud", scId: 255745371, start: 5 },
-  { artist: "Tame Impala",          title: "Let It Happen",            source: "soundcloud", scId: 256241372, start: 10 },
-  { artist: "Juice WRLD",           title: "All Girls Are The Same",   source: "soundcloud", scId: 373180994, start: 10 },
-  { artist: "Sewerperson",          title: "im cold (sorrowbringer)",  source: "soundcloud", scId: 1798511755, start: 10 },
+  // --- Sewerperson (12) ---
+  { artist: "Sewerperson", title: "what if (sorrowbringer)" },
+  { artist: "Sewerperson", title: "im cold (sorrowbringer)" },
+  { artist: "Sewerperson", title: "aspirin" },
+  { artist: "Sewerperson", title: "monachopsis" },
+  { artist: "Sewerperson", title: "hell" },
+  { artist: "Sewerperson", title: "angelbaby" },
+  { artist: "Sewerperson", title: "sixteen" },
+  { artist: "Sewerperson", title: "dogma" },
+  { artist: "Sewerperson", title: "selfish" },
+  { artist: "Sewerperson", title: "wither" },
+  { artist: "Sewerperson", title: "patience" },
+  { artist: "Sewerperson", title: "cyanide" },
+  // --- Kanye West (22) ---
+  { artist: "Kanye West", title: "Stronger" },
+  { artist: "Kanye West", title: "Gold Digger" },
+  { artist: "Kanye West", title: "Heartless" },
+  { artist: "Kanye West", title: "POWER" },
+  { artist: "Kanye West", title: "Runaway" },
+  { artist: "Kanye West", title: "All of the Lights" },
+  { artist: "Kanye West", title: "Flashing Lights" },
+  { artist: "Kanye West", title: "Can't Tell Me Nothing" },
+  { artist: "Kanye West", title: "Bound 2" },
+  { artist: "Kanye West", title: "Black Skinhead" },
+  { artist: "Kanye West", title: "Famous" },
+  { artist: "Kanye West", title: "Father Stretch My Hands Pt. 1" },
+  { artist: "Kanye West", title: "Ghost Town" },
+  { artist: "Kanye West", title: "Follow God" },
+  { artist: "Kanye West", title: "Praise God" },
+  { artist: "Kanye West", title: "Jesus Walks" },
+  { artist: "Kanye West", title: "Through the Wire" },
+  { artist: "Kanye West", title: "Touch the Sky" },
+  { artist: "Kanye West", title: "Good Morning" },
+  { artist: "Kanye West", title: "Waves" },
+  { artist: "Kanye West", title: "Violent Crimes" },
+  { artist: "Kanye West", title: "I Wonder" },
+  // --- Travis Scott (20) ---
+  { artist: "Travis Scott", title: "SICKO MODE" },
+  { artist: "Travis Scott", title: "goosebumps" },
+  { artist: "Travis Scott", title: "HIGHEST IN THE ROOM" },
+  { artist: "Travis Scott", title: "Antidote" },
+  { artist: "Travis Scott", title: "Butterfly Effect" },
+  { artist: "Travis Scott", title: "STARGAZING" },
+  { artist: "Travis Scott", title: "FE!N" },
+  { artist: "Travis Scott", title: "MY EYES" },
+  { artist: "Travis Scott", title: "Mamacita" },
+  { artist: "Travis Scott", title: "90210" },
+  { artist: "Travis Scott", title: "Pick Up the Phone" },
+  { artist: "Travis Scott", title: "Nightcrawler" },
+  { artist: "Travis Scott", title: "YOSEMITE" },
+  { artist: "Travis Scott", title: "CAN'T SAY" },
+  { artist: "Travis Scott", title: "TOPIA TWINS" },
+  { artist: "Travis Scott", title: "MELTDOWN" },
+  { artist: "Travis Scott", title: "Skeletons" },
+  { artist: "Travis Scott", title: "Astrothunder" },
+  { artist: "Travis Scott", title: "Wake Up" },
+  { artist: "Travis Scott", title: "Coffee Bean" },
+  // --- Playboi Carti (20) ---
+  { artist: "Playboi Carti", title: "Magnolia" },
+  { artist: "Playboi Carti", title: "Location" },
+  { artist: "Playboi Carti", title: "wokeuplikethis*" },
+  { artist: "Playboi Carti", title: "Shoota" },
+  { artist: "Playboi Carti", title: "Long Time - Intro" },
+  { artist: "Playboi Carti", title: "R.I.P." },
+  { artist: "Playboi Carti", title: "Sky" },
+  { artist: "Playboi Carti", title: "Rockstar Made" },
+  { artist: "Playboi Carti", title: "Stop Breathing" },
+  { artist: "Playboi Carti", title: "New Tank" },
+  { artist: "Playboi Carti", title: "ILoveUIHateU" },
+  { artist: "Playboi Carti", title: "Vamp Anthem" },
+  { artist: "Playboi Carti", title: "Miss The Rage" },
+  { artist: "Playboi Carti", title: "FlatBed Freestyle" },
+  { artist: "Playboi Carti", title: "Fell In Luv" },
+  { artist: "Playboi Carti", title: "Foreign" },
+  { artist: "Playboi Carti", title: "dothatshit!" },
+  { artist: "Playboi Carti", title: "Place" },
+  { artist: "Playboi Carti", title: "EVILJ0RDAN" },
+  { artist: "Playboi Carti", title: "H00DBYAIR" },
+  // --- Drake (22) ---
+  { artist: "Drake", title: "God's Plan" },
+  { artist: "Drake", title: "Hotline Bling" },
+  { artist: "Drake", title: "One Dance" },
+  { artist: "Drake", title: "In My Feelings" },
+  { artist: "Drake", title: "Started From the Bottom" },
+  { artist: "Drake", title: "Passionfruit" },
+  { artist: "Drake", title: "Nice For What" },
+  { artist: "Drake", title: "Nonstop" },
+  { artist: "Drake", title: "Headlines" },
+  { artist: "Drake", title: "Energy" },
+  { artist: "Drake", title: "Hold On, We're Going Home" },
+  { artist: "Drake", title: "Take Care" },
+  { artist: "Drake", title: "Marvins Room" },
+  { artist: "Drake", title: "Laugh Now Cry Later" },
+  { artist: "Drake", title: "Toosie Slide" },
+  { artist: "Drake", title: "Best I Ever Had" },
+  { artist: "Drake", title: "Controlla" },
+  { artist: "Drake", title: "Jumpman" },
+  { artist: "Drake", title: "Rich Flex" },
+  { artist: "Drake", title: "First Person Shooter" },
+  { artist: "Drake", title: "Jimmy Cooks" },
+  { artist: "Drake", title: "Fair Trade" },
+  // --- Yeat (16) ---
+  { artist: "Yeat", title: "Talk" },
+  { artist: "Yeat", title: "Rich Minion" },
+  { artist: "Yeat", title: "Money Twerk" },
+  { artist: "Yeat", title: "Poppin" },
+  { artist: "Yeat", title: "Gét Busy" },
+  { artist: "Yeat", title: "Turban" },
+  { artist: "Yeat", title: "Flawless" },
+  { artist: "Yeat", title: "Out thë way" },
+  { artist: "Yeat", title: "Monëy so big" },
+  { artist: "Yeat", title: "Talkin' Bout" },
+  { artist: "Yeat", title: "My wrist" },
+  { artist: "Yeat", title: "Bigger thën everything" },
+  { artist: "Yeat", title: "Nun id change" },
+  { artist: "Yeat", title: "Krank" },
+  { artist: "Yeat", title: "Flashy Trip" },
+  { artist: "Yeat", title: "Back Home" },
+  // --- Don Toliver (16) ---
+  { artist: "Don Toliver", title: "No Idea" },
+  { artist: "Don Toliver", title: "After Party" },
+  { artist: "Don Toliver", title: "Lemonade" },
+  { artist: "Don Toliver", title: "Had Enough" },
+  { artist: "Don Toliver", title: "Way Bigger" },
+  { artist: "Don Toliver", title: "What You Need" },
+  { artist: "Don Toliver", title: "Cardigan" },
+  { artist: "Don Toliver", title: "5X" },
+  { artist: "Don Toliver", title: "His & Hers" },
+  { artist: "Don Toliver", title: "Do It Right" },
+  { artist: "Don Toliver", title: "Private Landing" },
+  { artist: "Don Toliver", title: "Bandit" },
+  { artist: "Don Toliver", title: "No Pole" },
+  { artist: "Don Toliver", title: "Tore Up" },
+  { artist: "Don Toliver", title: "Backstreets" },
+  { artist: "Don Toliver", title: "Deep In The Water" },
+  // --- Rihanna (18) ---
+  { artist: "Rihanna", title: "Umbrella" },
+  { artist: "Rihanna", title: "Diamonds" },
+  { artist: "Rihanna", title: "Work" },
+  { artist: "Rihanna", title: "We Found Love" },
+  { artist: "Rihanna", title: "Only Girl (In the World)" },
+  { artist: "Rihanna", title: "Stay" },
+  { artist: "Rihanna", title: "Don't Stop the Music" },
+  { artist: "Rihanna", title: "Rude Boy" },
+  { artist: "Rihanna", title: "Disturbia" },
+  { artist: "Rihanna", title: "What's My Name?" },
+  { artist: "Rihanna", title: "S&M" },
+  { artist: "Rihanna", title: "Man Down" },
+  { artist: "Rihanna", title: "Take a Bow" },
+  { artist: "Rihanna", title: "Needed Me" },
+  { artist: "Rihanna", title: "Kiss It Better" },
+  { artist: "Rihanna", title: "Love on the Brain" },
+  { artist: "Rihanna", title: "Wild Thoughts" },
+  { artist: "Rihanna", title: "Pon de Replay" },
+  // --- The Weeknd (20) ---
+  { artist: "The Weeknd", title: "Blinding Lights" },
+  { artist: "The Weeknd", title: "Starboy" },
+  { artist: "The Weeknd", title: "The Hills" },
+  { artist: "The Weeknd", title: "Can't Feel My Face" },
+  { artist: "The Weeknd", title: "Save Your Tears" },
+  { artist: "The Weeknd", title: "Die For You" },
+  { artist: "The Weeknd", title: "I Feel It Coming" },
+  { artist: "The Weeknd", title: "Call Out My Name" },
+  { artist: "The Weeknd", title: "Earned It" },
+  { artist: "The Weeknd", title: "Often" },
+  { artist: "The Weeknd", title: "In the Night" },
+  { artist: "The Weeknd", title: "Heartless" },
+  { artist: "The Weeknd", title: "After Hours" },
+  { artist: "The Weeknd", title: "Out of Time" },
+  { artist: "The Weeknd", title: "Is There Someone Else?" },
+  { artist: "The Weeknd", title: "Reminder" },
+  { artist: "The Weeknd", title: "Party Monster" },
+  { artist: "The Weeknd", title: "Take My Breath" },
+  { artist: "The Weeknd", title: "Sacrifice" },
+  { artist: "The Weeknd", title: "One of the Girls" },
+  // --- Tyler, The Creator (16) ---
+  { artist: "Tyler, The Creator", title: "EARFQUAKE" },
+  { artist: "Tyler, The Creator", title: "See You Again" },
+  { artist: "Tyler, The Creator", title: "WUSYANAME" },
+  { artist: "Tyler, The Creator", title: "LUMBERJACK" },
+  { artist: "Tyler, The Creator", title: "Yonkers" },
+  { artist: "Tyler, The Creator", title: "She" },
+  { artist: "Tyler, The Creator", title: "IFHY" },
+  { artist: "Tyler, The Creator", title: "911 / Mr. Lonely" },
+  { artist: "Tyler, The Creator", title: "Boredom" },
+  { artist: "Tyler, The Creator", title: "Who Dat Boy" },
+  { artist: "Tyler, The Creator", title: "A BOY IS A GUN*" },
+  { artist: "Tyler, The Creator", title: "I THINK" },
+  { artist: "Tyler, The Creator", title: "NEW MAGIC WAND" },
+  { artist: "Tyler, The Creator", title: "SORRY NOT SORRY" },
+  { artist: "Tyler, The Creator", title: "DOGTOOTH" },
+  { artist: "Tyler, The Creator", title: "Are We Still Friends?" },
+  // --- Black Eyed Peas (12) ---
+  { artist: "Black Eyed Peas", title: "I Gotta Feeling" },
+  { artist: "Black Eyed Peas", title: "Where Is The Love?" },
+  { artist: "Black Eyed Peas", title: "Boom Boom Pow" },
+  { artist: "Black Eyed Peas", title: "My Humps" },
+  { artist: "Black Eyed Peas", title: "Let's Get It Started" },
+  { artist: "Black Eyed Peas", title: "Pump It" },
+  { artist: "Black Eyed Peas", title: "Meet Me Halfway" },
+  { artist: "Black Eyed Peas", title: "Don't Stop the Party" },
+  { artist: "Black Eyed Peas", title: "The Time (Dirty Bit)" },
+  { artist: "Black Eyed Peas", title: "Just Can't Get Enough" },
+  { artist: "Black Eyed Peas", title: "Rock That Body" },
+  { artist: "Black Eyed Peas", title: "Don't Lie" },
+  // --- Ken Carson (16) ---
+  { artist: "Ken Carson", title: "Succubus" },
+  { artist: "Ken Carson", title: "Fighting My Demons" },
+  { artist: "Ken Carson", title: "Freestyle 2" },
+  { artist: "Ken Carson", title: "Yale" },
+  { artist: "Ken Carson", title: "Rock N Roll" },
+  { artist: "Ken Carson", title: "MDMA" },
+  { artist: "Ken Carson", title: "Jennifer's Body" },
+  { artist: "Ken Carson", title: "Money & Sex" },
+  { artist: "Ken Carson", title: "Go" },
+  { artist: "Ken Carson", title: "Teen X" },
+  { artist: "Ken Carson", title: "i need u" },
+  { artist: "Ken Carson", title: "Nightcore" },
+  { artist: "Ken Carson", title: "overseas" },
+  { artist: "Ken Carson", title: "Lose It" },
+  { artist: "Ken Carson", title: "ss" },
+  { artist: "Ken Carson", title: "Hardcore" },
+  // --- Childish Gambino (12) ---
+  { artist: "Childish Gambino", title: "This Is America" },
+  { artist: "Childish Gambino", title: "Redbone" },
+  { artist: "Childish Gambino", title: "3005" },
+  { artist: "Childish Gambino", title: "Sober" },
+  { artist: "Childish Gambino", title: "Sweatpants" },
+  { artist: "Childish Gambino", title: "Heartbeat" },
+  { artist: "Childish Gambino", title: "Me and Your Mama" },
+  { artist: "Childish Gambino", title: "Telegraph Ave." },
+  { artist: "Childish Gambino", title: "Feels Like Summer" },
+  { artist: "Childish Gambino", title: "V. 3005" },
+  { artist: "Childish Gambino", title: "Freaks and Geeks" },
+  { artist: "Childish Gambino", title: "II. Worldstar" },
+  // --- Lil Uzi Vert (16) ---
+  { artist: "Lil Uzi Vert", title: "XO Tour Llif3" },
+  { artist: "Lil Uzi Vert", title: "Money Longer" },
+  { artist: "Lil Uzi Vert", title: "The Way Life Goes" },
+  { artist: "Lil Uzi Vert", title: "Sauce It Up" },
+  { artist: "Lil Uzi Vert", title: "Just Wanna Rock" },
+  { artist: "Lil Uzi Vert", title: "20 Min" },
+  { artist: "Lil Uzi Vert", title: "Do What I Want" },
+  { artist: "Lil Uzi Vert", title: "You Was Right" },
+  { artist: "Lil Uzi Vert", title: "Neon Guts" },
+  { artist: "Lil Uzi Vert", title: "444+222" },
+  { artist: "Lil Uzi Vert", title: "Sanguine Paradise" },
+  { artist: "Lil Uzi Vert", title: "That's a Rack" },
+  { artist: "Lil Uzi Vert", title: "Futsal Shuffle 2020" },
+  { artist: "Lil Uzi Vert", title: "P2" },
+  { artist: "Lil Uzi Vert", title: "Erase Your Social" },
+  { artist: "Lil Uzi Vert", title: "Endless Fashion" },
+  // --- Kendrick Lamar (18) ---
+  { artist: "Kendrick Lamar", title: "HUMBLE." },
+  { artist: "Kendrick Lamar", title: "Not Like Us" },
+  { artist: "Kendrick Lamar", title: "DNA." },
+  { artist: "Kendrick Lamar", title: "Alright" },
+  { artist: "Kendrick Lamar", title: "King Kunta" },
+  { artist: "Kendrick Lamar", title: "Swimming Pools (Drank)" },
+  { artist: "Kendrick Lamar", title: "Bitch, Don't Kill My Vibe" },
+  { artist: "Kendrick Lamar", title: "Money Trees" },
+  { artist: "Kendrick Lamar", title: "LOYALTY." },
+  { artist: "Kendrick Lamar", title: "ELEMENT." },
+  { artist: "Kendrick Lamar", title: "Poetic Justice" },
+  { artist: "Kendrick Lamar", title: "i" },
+  { artist: "Kendrick Lamar", title: "The Recipe" },
+  { artist: "Kendrick Lamar", title: "N95" },
+  { artist: "Kendrick Lamar", title: "Backseat Freestyle" },
+  { artist: "Kendrick Lamar", title: "LOVE." },
+  { artist: "Kendrick Lamar", title: "All The Stars" },
+  { artist: "Kendrick Lamar", title: "Squabble Up" },
+  // --- XXXTENTACION (14) ---
+  { artist: "XXXTENTACION", title: "SAD!" },
+  { artist: "XXXTENTACION", title: "Moonlight" },
+  { artist: "XXXTENTACION", title: "Jocelyn Flores" },
+  { artist: "XXXTENTACION", title: "changes" },
+  { artist: "XXXTENTACION", title: "Look at Me!" },
+  { artist: "XXXTENTACION", title: "Fuck Love" },
+  { artist: "XXXTENTACION", title: "Everybody Dies In Their Nightmares" },
+  { artist: "XXXTENTACION", title: "Revenge" },
+  { artist: "XXXTENTACION", title: "NUMB" },
+  { artist: "XXXTENTACION", title: "SLIPKNOT" },
+  { artist: "XXXTENTACION", title: "Hope" },
+  { artist: "XXXTENTACION", title: "ARMS AROUND YOU" },
+  { artist: "XXXTENTACION", title: "BAD!" },
+  { artist: "XXXTENTACION", title: "Depression & Obsession" },
+  // --- Metro Boomin (12) ---
+  { artist: "Metro Boomin", title: "Creepin'" },
+  { artist: "Metro Boomin", title: "Superhero (Heroes & Villains)" },
+  { artist: "Metro Boomin", title: "Too Many Nights" },
+  { artist: "Metro Boomin", title: "Trance" },
+  { artist: "Metro Boomin", title: "Space Cadet" },
+  { artist: "Metro Boomin", title: "Raindrops (Insane)" },
+  { artist: "Metro Boomin", title: "Am I Dreaming" },
+  { artist: "Metro Boomin", title: "Like That" },
+  { artist: "Metro Boomin", title: "Type Shit" },
+  { artist: "Metro Boomin", title: "Niagara Falls (Foot or 2)" },
+  { artist: "Metro Boomin", title: "No Complaints" },
+  { artist: "Metro Boomin", title: "10 Freaky Girls" },
+  // --- The Beatles (20) ---
+  { artist: "The Beatles", title: "Hey Jude" },
+  { artist: "The Beatles", title: "Come Together" },
+  { artist: "The Beatles", title: "Let It Be" },
+  { artist: "The Beatles", title: "Yesterday" },
+  { artist: "The Beatles", title: "Here Comes the Sun" },
+  { artist: "The Beatles", title: "Help!" },
+  { artist: "The Beatles", title: "A Hard Day's Night" },
+  { artist: "The Beatles", title: "Twist and Shout" },
+  { artist: "The Beatles", title: "I Want to Hold Your Hand" },
+  { artist: "The Beatles", title: "Blackbird" },
+  { artist: "The Beatles", title: "Eleanor Rigby" },
+  { artist: "The Beatles", title: "Penny Lane" },
+  { artist: "The Beatles", title: "Strawberry Fields Forever" },
+  { artist: "The Beatles", title: "Ob-La-Di, Ob-La-Da" },
+  { artist: "The Beatles", title: "While My Guitar Gently Weeps" },
+  { artist: "The Beatles", title: "Something" },
+  { artist: "The Beatles", title: "In My Life" },
+  { artist: "The Beatles", title: "Yellow Submarine" },
+  { artist: "The Beatles", title: "All You Need Is Love" },
+  { artist: "The Beatles", title: "Get Back" },
+  // --- Lady Gaga (16) ---
+  { artist: "Lady Gaga", title: "Bad Romance" },
+  { artist: "Lady Gaga", title: "Poker Face" },
+  { artist: "Lady Gaga", title: "Shallow" },
+  { artist: "Lady Gaga", title: "Just Dance" },
+  { artist: "Lady Gaga", title: "Telephone" },
+  { artist: "Lady Gaga", title: "Alejandro" },
+  { artist: "Lady Gaga", title: "Born This Way" },
+  { artist: "Lady Gaga", title: "Paparazzi" },
+  { artist: "Lady Gaga", title: "Applause" },
+  { artist: "Lady Gaga", title: "Million Reasons" },
+  { artist: "Lady Gaga", title: "Rain On Me" },
+  { artist: "Lady Gaga", title: "Stupid Love" },
+  { artist: "Lady Gaga", title: "LoveGame" },
+  { artist: "Lady Gaga", title: "Judas" },
+  { artist: "Lady Gaga", title: "Always Remember Us This Way" },
+  { artist: "Lady Gaga", title: "Die With A Smile" },
+  // --- SZA (14) ---
+  { artist: "SZA", title: "Kill Bill" },
+  { artist: "SZA", title: "Snooze" },
+  { artist: "SZA", title: "Good Days" },
+  { artist: "SZA", title: "The Weekend" },
+  { artist: "SZA", title: "Love Galore" },
+  { artist: "SZA", title: "Broken Clocks" },
+  { artist: "SZA", title: "Drew Barrymore" },
+  { artist: "SZA", title: "I Hate U" },
+  { artist: "SZA", title: "Shirt" },
+  { artist: "SZA", title: "Nobody Gets Me" },
+  { artist: "SZA", title: "Saturn" },
+  { artist: "SZA", title: "Low" },
+  { artist: "SZA", title: "Garden (Say It Like Dat)" },
+  { artist: "SZA", title: "Normal Girl" },
+  // --- A$AP Rocky (12) ---
+  { artist: "A$AP Rocky", title: "Praise The Lord (Da Shine)" },
+  { artist: "A$AP Rocky", title: "L$D" },
+  { artist: "A$AP Rocky", title: "Everyday" },
+  { artist: "A$AP Rocky", title: "Fashion Killa" },
+  { artist: "A$AP Rocky", title: "Peso" },
+  { artist: "A$AP Rocky", title: "Goldie" },
+  { artist: "A$AP Rocky", title: "F**kin' Problems" },
+  { artist: "A$AP Rocky", title: "Wild for the Night" },
+  { artist: "A$AP Rocky", title: "Sundress" },
+  { artist: "A$AP Rocky", title: "Babushka Boi" },
+  { artist: "A$AP Rocky", title: "RIOT (Rowdy Pipe'n)" },
+  { artist: "A$AP Rocky", title: "A$AP Forever" },
+  // --- PinkPantheress (12) ---
+  { artist: "PinkPantheress", title: "Boy's a liar Pt. 2" },
+  { artist: "PinkPantheress", title: "Pain" },
+  { artist: "PinkPantheress", title: "Just for me" },
+  { artist: "PinkPantheress", title: "Mosquito" },
+  { artist: "PinkPantheress", title: "Nice to meet you" },
+  { artist: "PinkPantheress", title: "Angel" },
+  { artist: "PinkPantheress", title: "Break It Off" },
+  { artist: "PinkPantheress", title: "Capable of love" },
+  { artist: "PinkPantheress", title: "I must apologise" },
+  { artist: "PinkPantheress", title: "Passion" },
+  { artist: "PinkPantheress", title: "Attracted to you" },
+  { artist: "PinkPantheress", title: "Illegal" },
+  // --- Frank Ocean (14) ---
+  { artist: "Frank Ocean", title: "Thinkin Bout You" },
+  { artist: "Frank Ocean", title: "Pink + White" },
+  { artist: "Frank Ocean", title: "Nights" },
+  { artist: "Frank Ocean", title: "Ivy" },
+  { artist: "Frank Ocean", title: "Chanel" },
+  { artist: "Frank Ocean", title: "Lost" },
+  { artist: "Frank Ocean", title: "Novacane" },
+  { artist: "Frank Ocean", title: "Self Control" },
+  { artist: "Frank Ocean", title: "Godspeed" },
+  { artist: "Frank Ocean", title: "Pyramids" },
+  { artist: "Frank Ocean", title: "Sweet Life" },
+  { artist: "Frank Ocean", title: "Super Rich Kids" },
+  { artist: "Frank Ocean", title: "Solo" },
+  { artist: "Frank Ocean", title: "White Ferrari" },
+  // --- Empire of the Sun (8) ---
+  { artist: "Empire of the Sun", title: "Walking On A Dream" },
+  { artist: "Empire of the Sun", title: "We Are The People" },
+  { artist: "Empire of the Sun", title: "Alive" },
+  { artist: "Empire of the Sun", title: "High And Low" },
+  { artist: "Empire of the Sun", title: "Standing On The Shore" },
+  { artist: "Empire of the Sun", title: "DNA" },
+  { artist: "Empire of the Sun", title: "Way To Go" },
+  { artist: "Empire of the Sun", title: "Two Vines" },
+  // --- 50 Cent (12) ---
+  { artist: "50 Cent", title: "In Da Club" },
+  { artist: "50 Cent", title: "Candy Shop" },
+  { artist: "50 Cent", title: "21 Questions" },
+  { artist: "50 Cent", title: "P.I.M.P." },
+  { artist: "50 Cent", title: "Many Men (Wish Death)" },
+  { artist: "50 Cent", title: "Just A Lil Bit" },
+  { artist: "50 Cent", title: "Window Shopper" },
+  { artist: "50 Cent", title: "Ayo Technology" },
+  { artist: "50 Cent", title: "Disco Inferno" },
+  { artist: "50 Cent", title: "Best Friend" },
+  { artist: "50 Cent", title: "Wanksta" },
+  { artist: "50 Cent", title: "If I Can't" },
+  // --- Justin Timberlake (12) ---
+  { artist: "Justin Timberlake", title: "Can't Stop The Feeling!" },
+  { artist: "Justin Timberlake", title: "SexyBack" },
+  { artist: "Justin Timberlake", title: "Mirrors" },
+  { artist: "Justin Timberlake", title: "Cry Me a River" },
+  { artist: "Justin Timberlake", title: "Rock Your Body" },
+  { artist: "Justin Timberlake", title: "Suit & Tie" },
+  { artist: "Justin Timberlake", title: "My Love" },
+  { artist: "Justin Timberlake", title: "What Goes Around... Comes Around" },
+  { artist: "Justin Timberlake", title: "Señorita" },
+  { artist: "Justin Timberlake", title: "Like I Love You" },
+  { artist: "Justin Timberlake", title: "Summer Love" },
+  { artist: "Justin Timberlake", title: "TKO" },
+  // --- Selena Gomez (12) ---
+  { artist: "Selena Gomez", title: "Lose You to Love Me" },
+  { artist: "Selena Gomez", title: "Come & Get It" },
+  { artist: "Selena Gomez", title: "Love You Like a Love Song" },
+  { artist: "Selena Gomez", title: "Hands to Myself" },
+  { artist: "Selena Gomez", title: "Rare" },
+  { artist: "Selena Gomez", title: "Back to You" },
+  { artist: "Selena Gomez", title: "Wolves" },
+  { artist: "Selena Gomez", title: "It Ain't Me" },
+  { artist: "Selena Gomez", title: "Same Old Love" },
+  { artist: "Selena Gomez", title: "Good for You" },
+  { artist: "Selena Gomez", title: "Calm Down" },
+  { artist: "Selena Gomez", title: "Single Soon" },
+  // --- Radiohead (12) ---
+  { artist: "Radiohead", title: "Creep" },
+  { artist: "Radiohead", title: "Karma Police" },
+  { artist: "Radiohead", title: "No Surprises" },
+  { artist: "Radiohead", title: "High and Dry" },
+  { artist: "Radiohead", title: "Fake Plastic Trees" },
+  { artist: "Radiohead", title: "Paranoid Android" },
+  { artist: "Radiohead", title: "Everything In Its Right Place" },
+  { artist: "Radiohead", title: "15 Step" },
+  { artist: "Radiohead", title: "Weird Fishes / Arpeggi" },
+  { artist: "Radiohead", title: "Just" },
+  { artist: "Radiohead", title: "Street Spirit (Fade Out)" },
+  { artist: "Radiohead", title: "Nude" },
+  // --- Nirvana (12) ---
+  { artist: "Nirvana", title: "Smells Like Teen Spirit" },
+  { artist: "Nirvana", title: "Come As You Are" },
+  { artist: "Nirvana", title: "Lithium" },
+  { artist: "Nirvana", title: "In Bloom" },
+  { artist: "Nirvana", title: "Heart-Shaped Box" },
+  { artist: "Nirvana", title: "About a Girl" },
+  { artist: "Nirvana", title: "The Man Who Sold the World" },
+  { artist: "Nirvana", title: "All Apologies" },
+  { artist: "Nirvana", title: "Rape Me" },
+  { artist: "Nirvana", title: "Polly" },
+  { artist: "Nirvana", title: "Dumb" },
+  { artist: "Nirvana", title: "Something in the Way" },
+  // --- Led Zeppelin (14) ---
+  { artist: "Led Zeppelin", title: "Stairway to Heaven" },
+  { artist: "Led Zeppelin", title: "Whole Lotta Love" },
+  { artist: "Led Zeppelin", title: "Immigrant Song" },
+  { artist: "Led Zeppelin", title: "Black Dog" },
+  { artist: "Led Zeppelin", title: "Kashmir" },
+  { artist: "Led Zeppelin", title: "Rock and Roll" },
+  { artist: "Led Zeppelin", title: "Good Times Bad Times" },
+  { artist: "Led Zeppelin", title: "Ramble On" },
+  { artist: "Led Zeppelin", title: "Going to California" },
+  { artist: "Led Zeppelin", title: "D'yer Mak'er" },
+  { artist: "Led Zeppelin", title: "Over the Hills and Far Away" },
+  { artist: "Led Zeppelin", title: "Communication Breakdown" },
+  { artist: "Led Zeppelin", title: "Fool in the Rain" },
+  { artist: "Led Zeppelin", title: "The Ocean" },
+  // --- Pink Floyd (12) ---
+  { artist: "Pink Floyd", title: "Another Brick In The Wall, Pt. 2" },
+  { artist: "Pink Floyd", title: "Wish You Were Here" },
+  { artist: "Pink Floyd", title: "Comfortably Numb" },
+  { artist: "Pink Floyd", title: "Money" },
+  { artist: "Pink Floyd", title: "Time" },
+  { artist: "Pink Floyd", title: "Shine On You Crazy Diamond (Pts. 1-5)" },
+  { artist: "Pink Floyd", title: "Breathe (In the Air)" },
+  { artist: "Pink Floyd", title: "Hey You" },
+  { artist: "Pink Floyd", title: "Us and Them" },
+  { artist: "Pink Floyd", title: "Brain Damage" },
+  { artist: "Pink Floyd", title: "High Hopes" },
+  { artist: "Pink Floyd", title: "Learning to Fly" },
+  // --- Guns N' Roses (10) ---
+  { artist: "Guns N' Roses", title: "Sweet Child O' Mine" },
+  { artist: "Guns N' Roses", title: "November Rain" },
+  { artist: "Guns N' Roses", title: "Welcome to the Jungle" },
+  { artist: "Guns N' Roses", title: "Paradise City" },
+  { artist: "Guns N' Roses", title: "Don't Cry" },
+  { artist: "Guns N' Roses", title: "Patience" },
+  { artist: "Guns N' Roses", title: "Knockin' on Heaven's Door" },
+  { artist: "Guns N' Roses", title: "Civil War" },
+  { artist: "Guns N' Roses", title: "Estranged" },
+  { artist: "Guns N' Roses", title: "Live and Let Die" },
+  // --- Pixies (6) ---
+  { artist: "Pixies", title: "Where Is My Mind?" },
+  { artist: "Pixies", title: "Here Comes Your Man" },
+  { artist: "Pixies", title: "Debaser" },
+  { artist: "Pixies", title: "Wave of Mutilation" },
+  { artist: "Pixies", title: "Monkey Gone to Heaven" },
+  { artist: "Pixies", title: "Hey" },
+  // --- The Goo Goo Dolls (3) ---
+  { artist: "The Goo Goo Dolls", title: "Iris" },
+  { artist: "The Goo Goo Dolls", title: "Slide" },
+  { artist: "The Goo Goo Dolls", title: "Name" },
+  // --- AC/DC (12) ---
+  { artist: "AC/DC", title: "Back In Black" },
+  { artist: "AC/DC", title: "Highway to Hell" },
+  { artist: "AC/DC", title: "Thunderstruck" },
+  { artist: "AC/DC", title: "You Shook Me All Night Long" },
+  { artist: "AC/DC", title: "T.N.T." },
+  { artist: "AC/DC", title: "Hells Bells" },
+  { artist: "AC/DC", title: "Shoot to Thrill" },
+  { artist: "AC/DC", title: "Dirty Deeds Done Dirt Cheap" },
+  { artist: "AC/DC", title: "For Those About to Rock (We Salute You)" },
+  { artist: "AC/DC", title: "It's a Long Way to the Top (If You Wanna Rock 'N' Roll)" },
+  { artist: "AC/DC", title: "Rock N Roll Train" },
+  { artist: "AC/DC", title: "Whole Lotta Rosie" },
+  // --- J. Cole (12) ---
+  { artist: "J. Cole", title: "No Role Modelz" },
+  { artist: "J. Cole", title: "MIDDLE CHILD" },
+  { artist: "J. Cole", title: "Work Out" },
+  { artist: "J. Cole", title: "Power Trip" },
+  { artist: "J. Cole", title: "She Knows" },
+  { artist: "J. Cole", title: "Wet Dreamz" },
+  { artist: "J. Cole", title: "G.O.M.D." },
+  { artist: "J. Cole", title: "Love Yourz" },
+  { artist: "J. Cole", title: "A Lot" },
+  { artist: "J. Cole", title: "Deja Vu" },
+  { artist: "J. Cole", title: "p r i d e . i s . t h e . d e v i l" },
+  { artist: "J. Cole", title: "m y . l i f e" },
+  // --- Adele (12) ---
+  { artist: "Adele", title: "Rolling in the Deep" },
+  { artist: "Adele", title: "Hello" },
+  { artist: "Adele", title: "Someone Like You" },
+  { artist: "Adele", title: "Set Fire to the Rain" },
+  { artist: "Adele", title: "When We Were Young" },
+  { artist: "Adele", title: "Easy On Me" },
+  { artist: "Adele", title: "Send My Love (To Your New Lover)" },
+  { artist: "Adele", title: "Rumour Has It" },
+  { artist: "Adele", title: "Skyfall" },
+  { artist: "Adele", title: "Water Under the Bridge" },
+  { artist: "Adele", title: "Oh My God" },
+  { artist: "Adele", title: "Chasing Pavements" },
+  // --- Ariana Grande (14) ---
+  { artist: "Ariana Grande", title: "thank u, next" },
+  { artist: "Ariana Grande", title: "7 rings" },
+  { artist: "Ariana Grande", title: "positions" },
+  { artist: "Ariana Grande", title: "Side To Side" },
+  { artist: "Ariana Grande", title: "no tears left to cry" },
+  { artist: "Ariana Grande", title: "Into You" },
+  { artist: "Ariana Grande", title: "Dangerous Woman" },
+  { artist: "Ariana Grande", title: "God is a woman" },
+  { artist: "Ariana Grande", title: "break up with your girlfriend, i'm bored" },
+  { artist: "Ariana Grande", title: "One Last Time" },
+  { artist: "Ariana Grande", title: "Problem" },
+  { artist: "Ariana Grande", title: "Bang Bang" },
+  { artist: "Ariana Grande", title: "we can't be friends (wait for your love)" },
+  { artist: "Ariana Grande", title: "yes, and?" },
+  // --- Eminem (16) ---
+  { artist: "Eminem", title: "Lose Yourself" },
+  { artist: "Eminem", title: "Without Me" },
+  { artist: "Eminem", title: "The Real Slim Shady" },
+  { artist: "Eminem", title: "Not Afraid" },
+  { artist: "Eminem", title: "Love The Way You Lie" },
+  { artist: "Eminem", title: "Stan" },
+  { artist: "Eminem", title: "Mockingbird" },
+  { artist: "Eminem", title: "Rap God" },
+  { artist: "Eminem", title: "Till I Collapse" },
+  { artist: "Eminem", title: "When I'm Gone" },
+  { artist: "Eminem", title: "Godzilla" },
+  { artist: "Eminem", title: "My Name Is" },
+  { artist: "Eminem", title: "Sing For The Moment" },
+  { artist: "Eminem", title: "Cleanin' Out My Closet" },
+  { artist: "Eminem", title: "Houdini" },
+  { artist: "Eminem", title: "The Monster" },
+  // --- 21 Savage (12) ---
+  { artist: "21 Savage", title: "a lot" },
+  { artist: "21 Savage", title: "Bank Account" },
+  { artist: "21 Savage", title: "runnin" },
+  { artist: "21 Savage", title: "mode" },
+  { artist: "21 Savage", title: "redrum" },
+  { artist: "21 Savage", title: "n.h.i.e." },
+  { artist: "21 Savage", title: "X" },
+  { artist: "21 Savage", title: "No Heart" },
+  { artist: "21 Savage", title: "Ball w/o You" },
+  { artist: "21 Savage", title: "all my friends" },
+  { artist: "21 Savage", title: "Knife Talk" },
+  { artist: "21 Savage", title: "peaches & eggplants" },
+  // --- Michael Jackson (16) ---
+  { artist: "Michael Jackson", title: "Billie Jean" },
+  { artist: "Michael Jackson", title: "Thriller" },
+  { artist: "Michael Jackson", title: "Beat It" },
+  { artist: "Michael Jackson", title: "Smooth Criminal" },
+  { artist: "Michael Jackson", title: "Bad" },
+  { artist: "Michael Jackson", title: "The Way You Make Me Feel" },
+  { artist: "Michael Jackson", title: "Man in the Mirror" },
+  { artist: "Michael Jackson", title: "Rock with You" },
+  { artist: "Michael Jackson", title: "Don't Stop 'Til You Get Enough" },
+  { artist: "Michael Jackson", title: "Black or White" },
+  { artist: "Michael Jackson", title: "Remember the Time" },
+  { artist: "Michael Jackson", title: "They Don't Care About Us" },
+  { artist: "Michael Jackson", title: "P.Y.T. (Pretty Young Thing)" },
+  { artist: "Michael Jackson", title: "Human Nature" },
+  { artist: "Michael Jackson", title: "Wanna Be Startin' Somethin'" },
+  { artist: "Michael Jackson", title: "Dirty Diana" },
+  // --- Gorillaz (12) ---
+  { artist: "Gorillaz", title: "Feel Good Inc." },
+  { artist: "Gorillaz", title: "Clint Eastwood" },
+  { artist: "Gorillaz", title: "On Melancholy Hill" },
+  { artist: "Gorillaz", title: "DARE" },
+  { artist: "Gorillaz", title: "19-2000" },
+  { artist: "Gorillaz", title: "Dirty Harry" },
+  { artist: "Gorillaz", title: "Stylo" },
+  { artist: "Gorillaz", title: "Saturnz Barz" },
+  { artist: "Gorillaz", title: "Tranz" },
+  { artist: "Gorillaz", title: "Rhinestone Eyes" },
+  { artist: "Gorillaz", title: "El Mañana" },
+  { artist: "Gorillaz", title: "New Gold" },
 ];
 
 const DURATIONS = [0.5, 1, 2, 4, 8, 16]; // סולם הזמנים, כמו במשחק המקורי
@@ -365,6 +966,8 @@ const els = {
   durationLabel: document.getElementById('durationLabel'),
   attemptLabel: document.getElementById('attemptLabel'),
   startBtn: document.getElementById('startBtn'),
+  dailyTab: document.getElementById('dailyTab'),
+  unlimitedTab: document.getElementById('unlimitedTab'),
   playBtn: document.getElementById('playBtn'),
   stopBtn: document.getElementById('stopBtn'),
   skipBtn: document.getElementById('skipBtn'),
@@ -424,7 +1027,46 @@ function saveQueue(queue){
   }
 }
 
+// ---------- מצבי משחק: יומי / ללא הגבלה ----------
+let gameMode = 'daily';
+const DAILY_KEY = 'snipify_daily_v1';
+
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+// מחולל אקראיות דטרמיניסטי לפי תאריך - כולם מקבלים את אותו שיר יומי
+function mulberry32(seed){
+  return function(){
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function dailySong(){
+  const d = new Date();
+  const seed = d.getFullYear() * 10000 + (d.getMonth()+1) * 100 + d.getDate();
+  const rand = mulberry32(seed);
+  return SONGS[Math.floor(rand() * SONGS.length)];
+}
+
+function getDailyState(){
+  try{
+    const s = JSON.parse(localStorage.getItem(DAILY_KEY) || 'null');
+    if(s && s.date === todayStr()) return s;
+  }catch(e){}
+  return null;
+}
+
+function saveDailyState(won){
+  try{ localStorage.setItem(DAILY_KEY, JSON.stringify({ date: todayStr(), done: true, won: won })); }catch(e){}
+}
+
 function pickSong(){
+  if(gameMode === 'daily') return dailySong();
   let queue = loadQueue();
   if(queue.length === 0){
     queue = shuffle(SONGS.map((_, i) => i));
@@ -489,7 +1131,7 @@ function savePreviewCache(){
 }
 
 // קריאה ל-iTunes Search API בשיטת JSONP - הדרך שעובדת מדפדפן בלי חסימות CORS
-function itunesSearch(term){
+function itunesSearchRaw(term){
   return new Promise((resolve) => {
     const cb = 'itunesCb' + Math.floor(Math.random() * 1e9);
     const s = document.createElement('script');
@@ -501,6 +1143,31 @@ function itunesSearch(term){
     s.src = `https://itunes.apple.com/search?term=${term}&media=music&entity=song&limit=5&callback=${cb}`;
     document.body.appendChild(s);
   });
+}
+
+// חשוב מאוד: אפל מגבילה ל-~20 חיפושים בדקה. לכן כל החיפושים עוברים דרך "תור"
+// שמריץ בדיוק בקשה אחת בכל פעם, עם מרווח ביניהן - ובשום מצב לא מציף את ה-API.
+// (הצפה כזו היא מה שגרם לשגיאות 429/403 ולתקיעת האתר בטלפון)
+let itunesQueue = Promise.resolve();
+let lastItunesCall = 0;
+const ITUNES_MIN_GAP_MS = 3500;
+
+function itunesSearch(term){
+  const run = async () => {
+    const wait = Math.max(0, lastItunesCall + ITUNES_MIN_GAP_MS - Date.now());
+    if(wait > 0) await new Promise(r => setTimeout(r, wait));
+    lastItunesCall = Date.now();
+    let data = await itunesSearchRaw(term);
+    if(!data || !data.results){
+      // ייתכן שנחסמנו זמנית (rate limit) - מחכים יותר ומנסים פעם אחת נוספת
+      await new Promise(r => setTimeout(r, 10000));
+      lastItunesCall = Date.now();
+      data = await itunesSearchRaw(term);
+    }
+    return data;
+  };
+  itunesQueue = itunesQueue.then(run, run);
+  return itunesQueue;
 }
 
 // מאתרים את קטע ה-preview הרשמי של השיר (עם קאש מקומי)
@@ -542,17 +1209,25 @@ function preloadSong(song){
 // כך הלחיצה הראשונה על הכפתור תמיד קוראת ל-play/load ישירות מתוך הקליק עצמו,
 // בלי לחכות לטעינה א-סינכרונית אחריו - וזה מה שמונע מהדפדפן לחסום את הסאונד בפעם הראשונה.
 // כפתור "הפעלה" נשאר נעול עד שהשיר הראשון מוכן לניגון מיידי
-(async function initFirstSong(){
+(async function initFirstSong(attempt){
+  attempt = attempt || 0;
+  if(attempt >= 5){
+    els.startBtn.textContent = 'שגיאת טעינה - רעננו את הדף';
+    return;
+  }
   const ok = await prepareSong(peekNextSong());
   if(!ok){
-    // השיר הראשון לא נמצא ב-iTunes - מדלגים אליו הבא
+    // השיר לא נמצא ב-iTunes - מדלגים לשיר הבא (עד 5 ניסיונות, בקצב מרוסן)
     takeNextSong();
-    return initFirstSong();
+    peekedSong = null;
+    return initFirstSong(attempt + 1);
   }
   audioEngineReady = true;
+  const st = getDailyState();
+  if(gameMode === 'daily' && st && st.done) return; // היומי כבר שוחק - הכפתור נשאר נעול
   els.startBtn.disabled = false;
   els.startBtn.textContent = '▶ הפעלה';
-})();
+})(0);
 
 
 
@@ -691,9 +1366,13 @@ function handleGuess(){
     endGame(true);
   } else {
     els.feedback.className = 'feedback wrong';
-    els.feedback.textContent = 'לא מדויק, נסו שוב או דלגו';
+    els.feedback.textContent = 'לא מדויק - הקטע התארך, נסו שוב';
     if(attemptIndex >= DURATIONS.length - 1){
       endGame(false);
+    } else {
+      // כמו ב-Bandle: ניחוש שגוי "שורף" ניסיון ומאריך את הקטע, בדיוק כמו דילוג
+      attemptIndex++;
+      updateStatus();
     }
   }
   els.guessInput.value = '';
@@ -730,8 +1409,38 @@ function endGame(won){
 
   stopSnippet();
 
-  // טוענים מראש את השיר הבא - כשילחצו "שיר הבא" הניגון יהיה מיידי וישיר מהקליק
-  setTimeout(() => { preloadSong(peekNextSong()); }, 300);
+  if(gameMode === 'daily'){
+    saveDailyState(won);
+    els.nextBtn.textContent = 'לשחק עוד? המשיכו בללא הגבלה ←';
+  } else {
+    els.nextBtn.textContent = 'שיר הבא';
+    // טוענים מראש את השיר הבא - כשילחצו "שיר הבא" הניגון יהיה מיידי וישיר מהקליק
+    setTimeout(() => { preloadSong(peekNextSong()); }, 300);
+  }
+}
+
+function setMode(mode){
+  gameMode = mode;
+  els.dailyTab.classList.toggle('active', mode === 'daily');
+  els.unlimitedTab.classList.toggle('active', mode === 'unlimited');
+  peekedSong = null;
+  stopSnippet();
+
+  if(mode === 'daily'){
+    const st = getDailyState();
+    if(st && st.done){
+      els.feedback.className = 'feedback ' + (st.won ? 'right' : 'wrong');
+      els.feedback.textContent = st.won ? 'השיר היומי הושלם בהצלחה! חזרו מחר 🎉' : 'השיר היומי של היום נוצל - חזרו מחר!';
+      els.startBtn.disabled = true;
+      return;
+    }
+  }
+  els.feedback.className = 'feedback';
+  els.feedback.textContent = '';
+  els.reveal.classList.remove('show');
+  els.startBtn.disabled = false;
+  els.startBtn.textContent = '▶ הפעלה';
+  preloadSong(peekNextSong());
 }
 
 // ---------- Event bindings ----------
@@ -774,7 +1483,23 @@ els.guessInput.addEventListener('blur', () => {
   // דיליי קטן כדי לאפשר ללחיצה על הצעה (mousedown) לפעול קודם
   setTimeout(() => { els.suggestions.classList.remove('show'); }, 150);
 });
-els.nextBtn.addEventListener('click', startGame);
+els.nextBtn.addEventListener('click', () => {
+  if(gameMode === 'daily'){ setMode('unlimited'); return; }
+  startGame();
+});
+els.dailyTab.addEventListener('click', () => setMode('daily'));
+els.unlimitedTab.addEventListener('click', () => setMode('unlimited'));
+
+// אם השיר היומי כבר שוחק היום - מציגים את זה כבר בטעינת הדף
+(function checkDailyOnLoad(){
+  const st = getDailyState();
+  if(st && st.done){
+    els.feedback.className = 'feedback ' + (st.won ? 'right' : 'wrong');
+    els.feedback.textContent = st.won ? 'השיר היומי הושלם בהצלחה! חזרו מחר 🎉' : 'השיר היומי של היום נוצל - חזרו מחר!';
+    els.startBtn.disabled = true;
+    els.startBtn.textContent = 'היומי הושלם';
+  }
+})();
 
 updateStatus();
 </script>
