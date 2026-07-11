@@ -1805,10 +1805,39 @@ function preloadSong(song){
 // כך הלחיצה הראשונה על הכפתור תמיד קוראת ל-play/load ישירות מתוך הקליק עצמו,
 // בלי לחכות לטעינה א-סינכרונית אחריו - וזה מה שמונע מהדפדפן לחסום את הסאונד בפעם הראשונה.
 // כפתור "הפעלה" נשאר נעול עד שהשיר הראשון מוכן לניגון מיידי
-(async function initFirstSong(attempt){
+
+// רשת ביטחון: אם הטעינה תקועה (למשל בגלל rate-limit של iTunes) - במקום
+// "טוען..." שנשאר לנצח, אחרי 10 שניות מוצג כפתור "נסה שוב" שאפשר ללחוץ עליו.
+let initWatchdog = null;
+
+function armInitWatchdog(){
+  clearTimeout(initWatchdog);
+  initWatchdog = setTimeout(() => {
+    if(audioEngineReady) return;
+    els.startBtn.disabled = false;
+    els.startBtn.textContent = '🔄 לחצו כדי לנסות שוב';
+    els.startBtn.onclick = () => {
+      els.startBtn.onclick = null;
+      els.startBtn.disabled = true;
+      els.startBtn.textContent = 'טוען...';
+      initFirstSong(0);
+    };
+  }, 10000);
+}
+
+async function initFirstSong(attempt){
   attempt = attempt || 0;
+  armInitWatchdog();
   if(attempt >= 5){
-    els.startBtn.textContent = 'שגיאת טעינה - רעננו את הדף';
+    clearTimeout(initWatchdog);
+    els.startBtn.disabled = false;
+    els.startBtn.textContent = '🔄 לחצו כדי לנסות שוב';
+    els.startBtn.onclick = () => {
+      els.startBtn.onclick = null;
+      els.startBtn.disabled = true;
+      els.startBtn.textContent = 'טוען...';
+      initFirstSong(0);
+    };
     return;
   }
   const ok = await prepareSong(peekNextSong());
@@ -1818,12 +1847,15 @@ function preloadSong(song){
     peekedSong = null;
     return initFirstSong(attempt + 1);
   }
+  clearTimeout(initWatchdog);
   audioEngineReady = true;
+  els.startBtn.onclick = null;
   const st = getDailyState();
   if(gameMode === 'daily' && st && st.done) return; // היומי כבר שוחק - הכפתור נשאר נעול
   els.startBtn.disabled = false;
   els.startBtn.textContent = '▶ הפעלה';
-})(0);
+}
+initFirstSong(0);
 
 
 
