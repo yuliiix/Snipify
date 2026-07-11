@@ -1622,9 +1622,11 @@ function mulberry32(seed){
   };
 }
 
+let dailyOffset = 0;
+
 function dailySong(){
   const d = new Date();
-  const seed = d.getFullYear() * 10000 + (d.getMonth()+1) * 100 + d.getDate();
+  const seed = d.getFullYear() * 10000 + (d.getMonth()+1) * 100 + d.getDate() + dailyOffset;
   const rand = mulberry32(seed);
   return SONGS[Math.floor(rand() * SONGS.length)];
 }
@@ -1685,18 +1687,10 @@ function isCorrectGuess(guess, song){
       || normalize(song.artist).includes(g);
 }
 
-// ---------- YouTube IFrame API ----------
-// חשוב: הנגן נוצר כבר בטעינת הדף (לא בלחיצה), כדי שכל הפעלה בפועל
-// תיקרא ישירות מתוך אירוע הקליק של המשתמש - זה מה שמונע מהדפדפן
-// לחסום את הסאונד (מדיניות autoplay).
-
 // ---------- מנוע אודיו native (תצוגות מקדימות רשמיות של iTunes) ----------
 // כמו Bandle: מנגנים קובץ אודיו ישירות בדף, בשליטה מלאה - בלי iframe, בלי
 // פקודות מרחוק, בלי פרסומות. את קטעי ה-preview (30 שניות) מספקת אפל באופן
 // רשמי וחינמי דרך iTunes Search API.
-// אלמנט אודיו יחיד וקבוע לכל חיי הדף. באייפון, ברגע שהאלמנט הזה ניגן פעם
-// אחת ממגע של המשתמש - הוא "משוחרר" לתמיד, וכל החלפת שיר והפעלה תעבוד גם
-// בלי מגע. יצירת אלמנט חדש לכל שיר (כמו קודם) איבדה את האישור הזה בכל שיר.
 const audioEl = new Audio();
 audioEl.preload = 'auto';
 
@@ -1711,24 +1705,20 @@ function savePreviewCache(){
   try{ localStorage.setItem(PREVIEW_CACHE_KEY, JSON.stringify(previewCache)); }catch(e){}
 }
 
-// קריאה ל-iTunes Search API בשיטת JSONP - הדרך שעובדת מדפדפן בלי חסימות CORS
-function itunesSearchRaw(term){
-  return new Promise((resolve) => {
-    const cb = 'itunesCb' + Math.floor(Math.random() * 1e9);
-    const s = document.createElement('script');
-    let done = false;
-    const cleanup = () => { try{ delete window[cb]; }catch(e){} s.remove(); };
-    window[cb] = (data) => { done = true; cleanup(); resolve(data); };
-    s.onerror = () => { if(!done){ done = true; cleanup(); resolve(null); } };
-    setTimeout(() => { if(!done){ done = true; cleanup(); resolve(null); } }, 8000);
-    s.src = `https://itunes.apple.com/search?term=${term}&media=music&entity=song&limit=5&callback=${cb}`;
-    document.body.appendChild(s);
-  });
+// קריאה ל-iTunes Search API באמצעות fetch (תומך ב-CORS) במקום JSONP שנחסם במובייל
+async function itunesSearchRaw(term){
+  try {
+    const response = await fetch(`https://itunes.apple.com/search?term=${term}&media=music&entity=song&limit=5`);
+    if (!response.ok) return null;
+    return await response.json();
+  } catch (e) {
+    console.error("iTunes API fetch error:", e);
+    return null;
+  }
 }
 
 // חשוב מאוד: אפל מגבילה ל-~20 חיפושים בדקה. לכן כל החיפושים עוברים דרך "תור"
 // שמריץ בדיוק בקשה אחת בכל פעם, עם מרווח ביניהן - ובשום מצב לא מציף את ה-API.
-// (הצפה כזו היא מה שגרם לשגיאות 429/403 ולתקיעת האתר בטלפון)
 let itunesQueue = Promise.resolve();
 let lastItunesCall = 0;
 const ITUNES_MIN_GAP_MS = 3500;
@@ -1752,8 +1742,6 @@ function itunesSearch(term){
 }
 
 // מאתרים את קטע ה-preview הרשמי של השיר (עם קאש מקומי).
-// מסננים רמיקסים/קאברים/הופעות חיות, ומוודאים שהאמן בתוצאה תואם לאמן
-// המבוקש - כך שרק הגרסה המקורית של האמן עצמו נכנסת למשחק.
 const BAD_VERSION_WORDS = ['remix','cover','karaoke','tribute','instrumental',' live','sped up','slowed','acoustic','parody','medley','remake'];
 
 function isOriginalVersion(r, song){
@@ -1801,13 +1789,7 @@ function preloadSong(song){
   prepareSong(song); // async - רץ ברקע
 }
 
-// כפתור "הפעלה" נשאר נעול עד ששני מנועי הניגון (YouTube + SoundCloud) באמת מוכנים.
-// כך הלחיצה הראשונה על הכפתור תמיד קוראת ל-play/load ישירות מתוך הקליק עצמו,
-// בלי לחכות לטעינה א-סינכרונית אחריו - וזה מה שמונע מהדפדפן לחסום את הסאונד בפעם הראשונה.
-// כפתור "הפעלה" נשאר נעול עד שהשיר הראשון מוכן לניגון מיידי
-
-// רשת ביטחון: אם הטעינה תקועה (למשל בגלל rate-limit של iTunes) - במקום
-// "טוען..." שנשאר לנצח, אחרי 10 שניות מוצג כפתור "נסה שוב" שאפשר ללחוץ עליו.
+// רשת ביטחון: אם הטעינה תקועה - אחרי 10 שניות מוצג כפתור "נסה שוב" שאפשר ללחוץ עליו.
 let initWatchdog = null;
 
 function armInitWatchdog(){
@@ -1842,7 +1824,8 @@ async function initFirstSong(attempt){
   }
   const ok = await prepareSong(peekNextSong());
   if(!ok){
-    // השיר לא נמצא ב-iTunes - מדלגים לשיר הבא (עד 5 ניסיונות, בקצב מרוסן)
+    // התיקון: קידום הזרע (seed) היומי אם השיר לא זמין כדי למנוע לולאה אינסופית
+    if (gameMode === 'daily') dailyOffset++;
     takeNextSong();
     peekedSong = null;
     return initFirstSong(attempt + 1);
@@ -1858,7 +1841,6 @@ async function initFirstSong(attempt){
 initFirstSong(0);
 
 
-
 // מנגן קטע - נקרא תמיד ישירות מתוך handler של לחיצה אמיתית (start/play/skip)
 function playSongSnippet(){
   clearTimeout(stopTimer);
@@ -1868,22 +1850,28 @@ function playSongSnippet(){
   els.silentWarning.style.display = 'none';
 
   if(preparedSong !== currentSong){
-    // לא אמור לקרות בזרימה הרגילה (הכל מוכן מראש) - מכינים ומנגנים
-    prepareSong(currentSong).then(ok => {
-      if(!ok){ skipUnavailableSong(); return; }
-      playSongSnippet();
-    });
-    return;
+    // בדיקה מהירה בקאש כדי לאפשר ניגון סינכרוני במובייל (עוקף חסימת אבטחה של iOS)
+    const key = currentSong.artist + '|' + currentSong.title;
+    if(previewCache[key]){
+      audioEl.src = previewCache[key].url;
+      preparedSong = currentSong;
+    } else {
+      prepareSong(currentSong).then(ok => {
+        if(!ok){ skipUnavailableSong(); return; }
+        els.startBtn.disabled = false;
+        els.silentWarning.textContent = 'מוכן! לחצו שוב על נגן ▶ כדי לשמוע (אבטחת סלולר)';
+        els.silentWarning.style.display = 'block';
+      });
+      return;
+    }
   }
 
-  // נגן native = שליטה מלאה ומדויקת: חוזרים להתחלה, מנגנים, ועוצרים
-  // בדיוק אחרי משך הקטע. בלי iframe, בלי פקודות מרחוק, בלי הפתעות.
   audioEl.currentTime = 0;
   const playPromise = audioEl.play();
   if(playPromise && playPromise.catch){
     playPromise.catch(() => {
       setWaveform(false);
-      els.silentWarning.textContent = 'לחצו שוב על נגן ▶';
+      els.silentWarning.textContent = 'לחצו שוב על נגן ▶ כדי לאפשר סאונד';
       els.silentWarning.style.display = 'block';
     });
   }
@@ -1999,7 +1987,6 @@ function handleGuess(){
     if(attemptIndex >= DURATIONS.length - 1){
       endGame(false);
     } else {
-      // כמו ב-Bandle: ניחוש שגוי "שורף" ניסיון ומאריך את הקטע, בדיוק כמו דילוג
       attemptIndex++;
       updateStatus();
     }
@@ -2043,7 +2030,6 @@ function endGame(won){
     els.nextBtn.textContent = 'לשחק עוד? המשיכו בללא הגבלה ←';
   } else {
     els.nextBtn.textContent = 'שיר הבא';
-    // טוענים מראש את השיר הבא - כשילחצו "שיר הבא" הניגון יהיה מיידי וישיר מהקליק
     setTimeout(() => { preloadSong(peekNextSong()); }, 300);
   }
 }
@@ -2109,7 +2095,6 @@ els.guessInput.addEventListener('input', () => {
   renderSuggestions();
 });
 els.guessInput.addEventListener('blur', () => {
-  // דיליי קטן כדי לאפשר ללחיצה על הצעה (mousedown) לפעול קודם
   setTimeout(() => { els.suggestions.classList.remove('show'); }, 150);
 });
 els.nextBtn.addEventListener('click', () => {
@@ -2119,7 +2104,6 @@ els.nextBtn.addEventListener('click', () => {
 els.dailyTab.addEventListener('click', () => setMode('daily'));
 els.unlimitedTab.addEventListener('click', () => setMode('unlimited'));
 
-// אם השיר היומי כבר שוחק היום - מציגים את זה כבר בטעינת הדף
 (function checkDailyOnLoad(){
   const st = getDailyState();
   if(st && st.done){
