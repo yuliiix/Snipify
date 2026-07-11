@@ -578,9 +578,11 @@ function playSongSnippet(){
   const trackUrl = `https://api.soundcloud.com/tracks/${currentSong.scId}`;
 
   if(scLoadedTrackId === currentSong.scId){
-    // השיר כבר טעון מראש - חוזרים להתחלה ומנגנים, מיידית וישירות מהקליק.
-    scWidget.seekTo(0);
+    // סדר הפקודות קריטי לאייפון: play() חייבת להיות הפקודה הראשונה שנשלחת
+    // מתוך המגע עצמו - היא זו ש"נושאת" את אישור המשתמש שפותח את הסאונד.
+    // רק אחריה שולחים את החזרה להתחלה. סדר הפוך = ניגון שקט ב-iOS.
     scWidget.play();
+    scWidget.seekTo(0);
   } else {
     // fallback - לא אמור לקרות בזרימה הרגילה (הכל נטען מראש), אבל ליתר ביטחון
     scLoadedTrackId = currentSong.scId;
@@ -612,8 +614,8 @@ function playSongSnippet(){
     if(myToken !== scLoadToken) return; // כבר לא רלוונטי - הייתה בקשה חדשה יותר
     if(scRetryCount < MAX_SC_RETRIES){
       scRetryCount++;
-      scWidget.seekTo(0);
       scWidget.play();
+      scWidget.seekTo(0);
       stuckTimer = setTimeout(checkScStuck, 4000);
     } else {
       // השיר הזה כנראה לא זמין (חסימה אזורית וכו') - עוברים לשיר אחר אוטומטית
