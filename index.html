@@ -1999,13 +1999,28 @@ audioEl.addEventListener('playing', () => {
 audioEl.addEventListener('pause', () => setWaveform(false));
 
 // מכינים שיר: פותרים את כתובת ה-preview ומכוונים את הנגן הקבוע אליה
+let preparingSongKey = null;
+let preparingPromise = null;
+
 async function prepareSong(song){
-  const info = await resolvePreview(song);
-  if(!info) return false;
-  audioEl.src = info.url;
-  preparedSong = song;
-  song._page = info.page;
-  return true;
+  const key = song.artist + '|' + song.title;
+  // אם כבר יש בקשה פעילה בדיוק לאותו שיר (למשל preloadSong+playSongSnippet
+  // נורו כמעט בו-זמנית) - לא פותחים בקשה כפולה, פשוט מחכים לתוצאה הקיימת.
+  if(preparingSongKey === key && preparingPromise) return preparingPromise;
+
+  preparingSongKey = key;
+  preparingPromise = (async () => {
+    const info = await resolvePreview(song);
+    if(!info) return false;
+    audioEl.src = info.url;
+    preparedSong = song;
+    song._page = info.page;
+    return true;
+  })();
+
+  const result = await preparingPromise;
+  if(preparingSongKey === key){ preparingSongKey = null; preparingPromise = null; }
+  return result;
 }
 
 function preloadSong(song){
