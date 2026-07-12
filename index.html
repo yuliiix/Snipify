@@ -2360,7 +2360,15 @@ function setMode(mode){
 
 // ---------- Event bindings ----------
 els.startBtn.addEventListener('click', startGame);
-els.playBtn.addEventListener('click', playSongSnippet);
+els.playBtn.addEventListener('click', () => {
+  // דיליי-מיגון קטן: לוחצים "נגן שוב" מהר-מהר-מהר עלול לגרום למירוץ בין
+  // איפוס המיקום (currentTime=0) לבין תחילת הניגון בפועל, ולפעמים הקטע
+  // "יזוז" קלות. חוסמים לחיצות חוזרות למשך רגע כדי שכל ניגון יסתיים
+  // ויתייצב באמת לפני שהבא מתחיל.
+  els.playBtn.disabled = true;
+  playSongSnippet();
+  setTimeout(() => { if(!gameOver) els.playBtn.disabled = false; }, 400);
+});
 els.stopBtn.addEventListener('click', stopSnippet);
 els.skipBtn.addEventListener('click', handleSkip);
 els.guessBtn.addEventListener('click', handleGuess);
