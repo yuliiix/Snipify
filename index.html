@@ -1883,7 +1883,7 @@ function itunesJSONP(term){
     const cleanup = () => { try{ delete window[cb]; }catch(e){} s.remove(); };
     window[cb] = (data) => { done = true; cleanup(); resolve(data); };
     s.onerror = () => { if(!done){ done = true; cleanup(); resolve(null); } };
-    setTimeout(() => { if(!done){ done = true; cleanup(); resolve(null); } }, 7000);
+    setTimeout(() => { if(!done){ done = true; cleanup(); resolve(null); } }, 4000);
     s.src = `https://itunes.apple.com/search?term=${term}&media=music&entity=song&limit=5&callback=${cb}`;
     document.body.appendChild(s);
   });
@@ -1911,7 +1911,7 @@ const PROXY_BUILDERS = [
 
 async function itunesSearchRaw(term){
   for(const build of PROXY_BUILDERS){
-    const data = await fetchJson(build(term), 6000);
+    const data = await fetchJson(build(term), 3500);
     if(data && data.results) return data;
   }
   // כל המתווכים נכשלו (או שהם עצמם עמוסים) - מנסים ישירות כמוצא אחרון
@@ -2100,26 +2100,29 @@ function playSongSnippet(){
     els.silentWarning.style.display = 'block';
     const requestedSong = currentSong;
 
-    // *** רשת ביטחון: אם ההכנה נתקעת (רשת, rate-limit, טאב שהיה ברקע) - לא
-    // נשארים על "טוען שיר..." לנצח. אחרי 12 שניות מוצעת אפשרות לנסות שוב. ***
+    // אחרי 8 שניות בלי תוצאה - מודיעים שזה לוקח זמן, אבל ממשיכים לנסות
+    const progressNotice = setTimeout(() => {
+      if(currentSong !== requestedSong || gameOver) return;
+      els.silentWarning.textContent = 'עדיין מחפש... ⏳';
+    }, 8000);
+
+    // *** רשת ביטחון אמיתית: המטרה שלא יהיה אף פעם מצב של שיר "תקוע" -
+    // אם אחרי הזמן הכי סביר (כל מקורות הגיבוי מוצו, ~19 שניות) עדיין אין
+    // תוצאה, המשחק פשוט עובר בעצמו לשיר אחר, בלי לחכות שהמשתמש ילחץ על
+    // משהו. ככה לעולם לא נשארים תקועים על שיר ספציפי שלא עובד. ***
     let settled = false;
     const loadWatchdog = setTimeout(() => {
       if(settled || currentSong !== requestedSong || gameOver) return;
       settled = true;
-      els.silentWarning.textContent = 'לוקח יותר זמן מהרגיל... לחצו כדי לנסות שוב ⏳';
-      els.silentWarning.style.cursor = 'pointer';
-      els.silentWarning.onclick = () => {
-        els.silentWarning.onclick = null;
-        els.silentWarning.style.cursor = '';
-        playSongSnippet();
-      };
-    }, 12000);
+      clearTimeout(progressNotice);
+      skipUnavailableSong();
+    }, 19000);
 
     prepareSong(currentSong).then(ok => {
-      if(settled || currentSong !== requestedSong || gameOver) { clearTimeout(loadWatchdog); return; }
+      if(settled || currentSong !== requestedSong || gameOver) { clearTimeout(loadWatchdog); clearTimeout(progressNotice); return; }
       settled = true;
       clearTimeout(loadWatchdog);
-      els.silentWarning.onclick = null;
+      clearTimeout(progressNotice);
       if(!ok){ skipUnavailableSong(); return; }
       playSongSnippet();
     });
