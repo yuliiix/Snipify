@@ -1909,10 +1909,26 @@ const PROXY_BUILDERS = [
   (term) => `https://api.allorigins.win/raw?url=${encodeURIComponent(ITUNES_URL_BASE(term))}`,
 ];
 
+// זיכרון "מקור אחרון שהצליח" - נשמר גם בין ביקורים. אם מקור מסוים נכשל
+// הרבה (חסימה/עומס זמני) ומקור אחר דווקא עובד עכשיו, המשחק "לומד" את זה
+// ומנסה קודם את זה שכן עובד, במקום להתעקש כל פעם על הסדר הקבוע מההתחלה.
+const LAST_GOOD_SOURCE_KEY = 'snipify_last_good_source';
+function getOrderedBuilders(){
+  let lastGoodIdx = -1;
+  try{ lastGoodIdx = parseInt(localStorage.getItem(LAST_GOOD_SOURCE_KEY), 10); }catch(e){}
+  if(!(lastGoodIdx >= 0 && lastGoodIdx < PROXY_BUILDERS.length)) return PROXY_BUILDERS.map((b, i) => [b, i]);
+  const ordered = [[PROXY_BUILDERS[lastGoodIdx], lastGoodIdx]];
+  PROXY_BUILDERS.forEach((b, i) => { if(i !== lastGoodIdx) ordered.push([b, i]); });
+  return ordered;
+}
+function rememberGoodSource(idx){
+  try{ localStorage.setItem(LAST_GOOD_SOURCE_KEY, String(idx)); }catch(e){}
+}
+
 async function itunesSearchRaw(term){
-  for(const build of PROXY_BUILDERS){
+  for(const [build, idx] of getOrderedBuilders()){
     const data = await fetchJson(build(term), 3500);
-    if(data && data.results) return data;
+    if(data && data.results){ rememberGoodSource(idx); return data; }
   }
   // כל המתווכים נכשלו (או שהם עצמם עמוסים) - מנסים ישירות כמוצא אחרון
   return await itunesJSONP(term);
