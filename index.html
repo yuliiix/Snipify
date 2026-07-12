@@ -1784,12 +1784,20 @@ function peekNextSong(){
 function takeNextSong(){
   const s = peekNextSong();
   peekedSong = null;
-  warmLookahead();
+  // *** תיקון קריטי: לא קוראים ל-warmLookahead() מיד! ***
+  // כל בקשות ה-iTunes (כולל preview, prepare, ולוקאהד) חולקות תור-בקשות
+  // משותף אחד (בגלל ה-rate-limit). אם ה"חימום" של השירים הבאים היה נכנס
+  // לתור באותו רגע שבו השיר שממש רוצים לנגן *עכשיו* גם הוא ממתין בתור -
+  // השיר הדחוף היה נדחק אחורה ומחכה בתור מאחורי בקשות רקע לא דחופות.
+  // זה בדיוק מה שגרם ל"לא עולה בכלל" ב-unlimited. עכשיו מחכים כמה שניות
+  // כדי לתת לשיר הנוכחי עדיפות מלאה על התור, ורק אז מתחילים לחמם קדימה.
+  setTimeout(warmLookahead, 4000);
   return s;
 }
 
 // פותר preview URLs ברקע לכמה שירים קדימה בתור (בלי לגעת בנגן עצמו - רק
-// ממלא את previewCache מראש). לא חוסם שום דבר; רץ בעדיפות נמוכה ברקע.
+// ממלא את previewCache מראש). לא חוסם שום דבר; רץ בעדיפות נמוכה ברקע,
+// ותמיד אחרי השהיה - כדי לא להתחרות עם השיר שהמשתמש ממש מחכה לו עכשיו.
 function warmLookahead(){
   if(gameMode !== 'unlimited') return; // ביומי אין "תור" - שיר אחד קבוע ליום
   const queue = loadQueue();
@@ -2275,7 +2283,7 @@ function endGame(won){
   } else {
     els.nextBtn.textContent = 'שיר הבא';
     // טוענים מראש את השיר הבא - כשילחצו "שיר הבא" הניגון יהיה מיידי וישיר מהקליק
-    setTimeout(() => { preloadSong(peekNextSong()); warmLookahead(); }, 300);
+    setTimeout(() => { preloadSong(peekNextSong()); setTimeout(warmLookahead, 4000); }, 300);
   }
 }
 
@@ -2301,7 +2309,7 @@ function setMode(mode){
   els.startBtn.disabled = false;
   els.startBtn.textContent = '▶ הפעלה';
   preloadSong(peekNextSong());
-  warmLookahead();
+  setTimeout(warmLookahead, 4000);
 }
 
 // ---------- Event bindings ----------
