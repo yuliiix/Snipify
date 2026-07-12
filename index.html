@@ -1918,29 +1918,43 @@ async function itunesSearchRaw(term){
   return await itunesJSONP(term);
 }
 
-// חשוב מאוד: אפל מגבילה ל-~20 חיפושים בדקה. לכן כל החיפושים עוברים דרך "תור"
-// שמריץ בדיוק בקשה אחת בכל פעם, עם מרווח ביניהן - ובשום מצב לא מציף את ה-API.
-// (הצפה כזו היא מה שגרם לשגיאות 429/403 ולתקיעת האתר בטלפון)
+// חשוב מאוד: אפל מגבילה ל-~20 חיפושים בדקה. לכן בקשות רקע (חימום מראש)
+// עוברות דרך "תור" שמריץ בדיוק בקשה אחת בכל פעם, עם מרווח ביניהן.
+// *** התיקון המרכזי: השיר שהמשתמש ממש מחכה לו עכשיו (priority) לא עובר
+// דרך התור הזה בכלל - הוא יוצא מיד. כך גם אם יש עומס גדול של בקשות רקע
+// (למשל דילוגים מהירים ברצף שיוצרים הרבה warmLookahead), השיר הדחוף
+// תמיד מקבל מענה מיידי ולא "נבלע" מאחורי תור הולך וגדל. זה בדיוק מה
+// שגרם ל"טוען בלי הפסקה" ב-unlimited. ***
 let itunesQueue = Promise.resolve();
 let lastItunesCall = 0;
 const ITUNES_MIN_GAP_MS = 1500;
+const inFlightTerms = new Set(); // מונע חימום כפול של אותו שיר בו-זמנית
 
-function itunesSearch(term){
+async function itunesSearchWithRetry(term){
+  let data = await itunesSearchRaw(term);
+  if(!data || !data.results){
+    await new Promise(r => setTimeout(r, 4000));
+    data = await itunesSearchRaw(term);
+  }
+  return data;
+}
+
+// מסלול רקע (מתוזמן, בתור משותף) - לחימום מראש בלבד
+function itunesSearchBackground(term){
   const run = async () => {
     const wait = Math.max(0, lastItunesCall + ITUNES_MIN_GAP_MS - Date.now());
     if(wait > 0) await new Promise(r => setTimeout(r, wait));
     lastItunesCall = Date.now();
-    let data = await itunesSearchRaw(term);
-    if(!data || !data.results){
-      // ייתכן שנחסמנו זמנית (rate limit) - מחכים יותר ומנסים פעם אחת נוספת
-      await new Promise(r => setTimeout(r, 10000));
-      lastItunesCall = Date.now();
-      data = await itunesSearchRaw(term);
-    }
-    return data;
+    return itunesSearchWithRetry(term);
   };
   itunesQueue = itunesQueue.then(run, run);
   return itunesQueue;
+}
+
+// מסלול דחוף (ללא תור, ללא המתנה) - לשיר שמנגנים עכשיו בפועל
+function itunesSearchPriority(term){
+  lastItunesCall = Date.now();
+  return itunesSearchWithRetry(term);
 }
 
 // מאתרים את קטע ה-preview הרשמי של השיר (עם קאש מקומי).
@@ -1959,13 +1973,18 @@ function isOriginalVersion(r, song){
   return ra.includes(wa) || wa.includes(ra);
 }
 
-async function resolvePreview(song){
+async function resolvePreview(song, priority){
   const key = song.artist + '|' + song.title;
   if(previewCache[key]){
     return previewCache[key].miss ? null : previewCache[key];
   }
+  if(!priority){
+    if(inFlightTerms.has(key)) return null; // כבר מתחמם ברקע - לא כופלים
+    inFlightTerms.add(key);
+  }
   const term = encodeURIComponent(song.artist + ' ' + song.title);
-  const data = await itunesSearch(term);
+  const data = priority ? await itunesSearchPriority(term) : await itunesSearchBackground(term);
+  if(!priority) inFlightTerms.delete(key);
   // אם ה-API עצמו לא ענה (רשת/חסימה זמנית) - לא שומרים כלום, ננסה שוב בפעם הבאה
   if(!data || !data.results) return null;
   const hit = data.results.find(r => r.previewUrl && isOriginalVersion(r, song));
@@ -2002,7 +2021,7 @@ audioEl.addEventListener('pause', () => setWaveform(false));
 let preparingSongKey = null;
 let preparingPromise = null;
 
-async function prepareSong(song){
+async function prepareSong(song, priority){
   const key = song.artist + '|' + song.title;
   // אם כבר יש בקשה פעילה בדיוק לאותו שיר (למשל preloadSong+playSongSnippet
   // נורו כמעט בו-זמנית) - לא פותחים בקשה כפולה, פשוט מחכים לתוצאה הקיימת.
@@ -2010,7 +2029,7 @@ async function prepareSong(song){
 
   preparingSongKey = key;
   preparingPromise = (async () => {
-    const info = await resolvePreview(song);
+    const info = await resolvePreview(song, priority);
     if(!info) return false;
     audioEl.src = info.url;
     preparedSong = song;
@@ -2024,7 +2043,7 @@ async function prepareSong(song){
 }
 
 function preloadSong(song){
-  prepareSong(song); // async - רץ ברקע
+  prepareSong(song, true); // async - רץ ברקע, אבל בעדיפות (זה השיר שכנראה יתבקש הבא)
 }
 
 // כפתור "הפעלה" נשאר נעול עד ששני מנועי הניגון (YouTube + SoundCloud) באמת מוכנים.
@@ -2118,7 +2137,7 @@ function playSongSnippet(){
       skipUnavailableSong();
     }, 19000);
 
-    prepareSong(currentSong).then(ok => {
+    prepareSong(currentSong, true).then(ok => {
       if(settled || currentSong !== requestedSong || gameOver) { clearTimeout(loadWatchdog); clearTimeout(progressNotice); return; }
       settled = true;
       clearTimeout(loadWatchdog);
