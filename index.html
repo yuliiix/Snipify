@@ -1850,7 +1850,7 @@ let preparedSong = null;    // איזה שיר מוכן כרגע לניגון
 let audioEngineReady = false;
 let stopTimer = null;
 let previewCache = {};
-const PREVIEW_CACHE_KEY = 'snipify_previews_v2';
+const PREVIEW_CACHE_KEY = 'snipify_previews_v3'; // v3: מנקה קאש ישן שאולי נצבע בטעות עם "לא נמצא" בגלל תקלות רשת זמניות מהיום
 
 try{ previewCache = JSON.parse(localStorage.getItem(PREVIEW_CACHE_KEY) || '{}'); }catch(e){ previewCache = {}; }
 function savePreviewCache(){
@@ -1992,7 +1992,13 @@ function isOriginalVersion(r, song){
 async function resolvePreview(song, priority){
   const key = song.artist + '|' + song.title;
   if(previewCache[key]){
-    return previewCache[key].miss ? null : previewCache[key];
+    if(previewCache[key].miss){
+      const age = Date.now() - (previewCache[key].ts || 0);
+      if(age < 3 * 24 * 60 * 60 * 1000) return null; // "לא נמצא" תקף ל-3 ימים בלבד, לא לצמיתות
+      delete previewCache[key]; // פג תוקף - מנסים שוב מהתחלה
+    } else {
+      return previewCache[key];
+    }
   }
   if(!priority){
     if(inFlightTerms.has(key)) return null; // כבר מתחמם ברקע - לא כופלים
@@ -2006,7 +2012,7 @@ async function resolvePreview(song, priority){
   const hit = data.results.find(r => r.previewUrl && isOriginalVersion(r, song));
   if(!hit){
     // השיר באמת לא קיים/לא עבר סינון - זוכרים את זה כדי לא לחפש אותו שוב ושוב
-    previewCache[key] = { miss: true };
+    previewCache[key] = { miss: true, ts: Date.now() };
     savePreviewCache();
     return null;
   }
@@ -2367,7 +2373,8 @@ function prepareNextForButton(){
 
 let modeSwitchToken = 0;
 
-function setMode(mode){
+function setMode(mode, attempt){
+  attempt = attempt || 0;
   gameMode = mode;
   els.dailyTab.classList.toggle('active', mode === 'daily');
   els.unlimitedTab.classList.toggle('active', mode === 'unlimited');
@@ -2402,19 +2409,32 @@ function setMode(mode){
   els.feedback.textContent = '';
   els.reveal.classList.remove('show');
 
-  // הכפתור נשאר נעול עד שהשיר באמת מוכן - כך שברגע שאפשר ללחוץ, ההפעלה
-  // תמיד מיידית, בלי מסך טעינה שמופיע אחרי הלחיצה.
+  // *** תיקון קריטי: הייתה כאן לולאה אינסופית - בכישלון, setMode קרא
+  // לעצמו שוב ושוב בלי סוף, בלי שום הגבלה. אם כל המקורות היו למטה, זה
+  // סובב לנצח בלי סימן חיצוני לכך. עכשיו יש הגבלה ל-6 ניסיונות, ואז
+  // מוצגת הודעה אמיתית עם כפתור ידני לנסות שוב - לעולם לא נשארים
+  // תקועים על "טוען..." בלי שום הסבר. ***
+  if(attempt >= 6){
+    els.startBtn.disabled = false;
+    els.startBtn.textContent = '🔄 לא הצלחתי - לחצו לנסות שוב';
+    els.startBtn.onclick = () => {
+      els.startBtn.onclick = null;
+      setMode(mode, 0);
+    };
+    return;
+  }
+
   els.startBtn.disabled = true;
-  els.startBtn.textContent = 'טוען...';
+  els.startBtn.textContent = attempt === 0 ? 'טוען...' : `טוען... (ניסיון ${attempt + 1})`;
   const song = peekNextSong();
   prepareSong(song, true).then(ok => {
     if(myToken !== modeSwitchToken) return; // המשתמש כבר עבר למצב אחר בינתיים
     if(!ok){
-      // השיר הראשון שנבחר לא זמין - מנסים את הבא, שקוף למשתמש
       peekedSong = null;
-      setMode(mode);
+      setMode(mode, attempt + 1);
       return;
     }
+    els.startBtn.onclick = null;
     els.startBtn.disabled = false;
     els.startBtn.textContent = '▶ הפעלה';
   });
