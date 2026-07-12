@@ -256,6 +256,7 @@
     font-size:12px;
     margin-top:6px;
   }
+  #silentWarning[style*="cursor"]{ text-decoration:underline; }
 </style>
 </head>
 <body>
@@ -1795,7 +1796,9 @@ async function resolvePreview(song){
     savePreviewCache();
     return null;
   }
-  const info = { url: hit.previewUrl, page: hit.trackViewUrl || '' };
+  // מוודאים HTTPS תמיד - קישור http:// בדף https נחסם כ"mixed content" בדפדפן
+  const secureUrl = hit.previewUrl.replace(/^http:\/\//, 'https://');
+  const info = { url: secureUrl, page: hit.trackViewUrl || '' };
   previewCache[key] = info;
   savePreviewCache();
   return info;
@@ -1893,8 +1896,27 @@ function playSongSnippet(){
     els.silentWarning.textContent = 'טוען שיר... ⏳';
     els.silentWarning.style.display = 'block';
     const requestedSong = currentSong;
+
+    // *** רשת ביטחון: אם ההכנה נתקעת (רשת, rate-limit, טאב שהיה ברקע) - לא
+    // נשארים על "טוען שיר..." לנצח. אחרי 12 שניות מוצעת אפשרות לנסות שוב. ***
+    let settled = false;
+    const loadWatchdog = setTimeout(() => {
+      if(settled || currentSong !== requestedSong || gameOver) return;
+      settled = true;
+      els.silentWarning.textContent = 'לוקח יותר זמן מהרגיל... לחצו כדי לנסות שוב ⏳';
+      els.silentWarning.style.cursor = 'pointer';
+      els.silentWarning.onclick = () => {
+        els.silentWarning.onclick = null;
+        els.silentWarning.style.cursor = '';
+        playSongSnippet();
+      };
+    }, 12000);
+
     prepareSong(currentSong).then(ok => {
-      if(currentSong !== requestedSong || gameOver) return; // המשתמש כבר עבר הלאה
+      if(settled || currentSong !== requestedSong || gameOver) { clearTimeout(loadWatchdog); return; }
+      settled = true;
+      clearTimeout(loadWatchdog);
+      els.silentWarning.onclick = null;
       if(!ok){ skipUnavailableSong(); return; }
       playSongSnippet();
     });
@@ -2144,6 +2166,17 @@ els.nextBtn.addEventListener('click', () => {
   startGame();
 });
 els.dailyTab.addEventListener('click', () => setMode('daily'));
+
+// אם הטאב חזר מהרקע (למשל מעבר אפליקציות באייפון) בזמן שהיה "טוען שיר..."
+// תקוע - נותנים לזה עוד ניסיון מיידי במקום לחכות לטיימר.
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState !== 'visible') return;
+  if(!gameOver && currentSong && preparedSong !== currentSong && els.silentWarning.style.cursor === 'pointer'){
+    els.silentWarning.onclick = null;
+    els.silentWarning.style.cursor = '';
+    playSongSnippet();
+  }
+});
 els.unlimitedTab.addEventListener('click', () => setMode('unlimited'));
 
 // אם השיר היומי כבר שוחק היום - מציגים את זה כבר בטעינת הדף
