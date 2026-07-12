@@ -1725,7 +1725,24 @@ function savePreviewCache(){
 }
 
 // קריאה ל-iTunes Search API בשיטת JSONP - הדרך שעובדת מדפדפן בלי חסימות CORS
-function itunesSearchRaw(term){
+// עוזר: fetch עם timeout אמיתי וניתן לביטול (בניגוד ל-JSONP, זה נותן שגיאות
+// אמיתיות ולא יכול "להישאר תלוי" בלי תשובה בכלל).
+async function fetchJson(url, ms){
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try{
+    const res = await fetch(url, { signal: controller.signal, cache: 'no-store' });
+    clearTimeout(timer);
+    if(!res.ok) return null;
+    return await res.json();
+  }catch(e){
+    clearTimeout(timer);
+    return null;
+  }
+}
+
+// גיבוי ישן (JSONP ישיר ל-iTunes) - נשמר כמוצא אחרון אם שני הפרוקסים למטה נכשלים
+function itunesJSONP(term){
   return new Promise((resolve) => {
     const cb = 'itunesCb' + Math.floor(Math.random() * 1e9);
     const s = document.createElement('script');
@@ -1733,10 +1750,31 @@ function itunesSearchRaw(term){
     const cleanup = () => { try{ delete window[cb]; }catch(e){} s.remove(); };
     window[cb] = (data) => { done = true; cleanup(); resolve(data); };
     s.onerror = () => { if(!done){ done = true; cleanup(); resolve(null); } };
-    setTimeout(() => { if(!done){ done = true; cleanup(); resolve(null); } }, 8000);
+    setTimeout(() => { if(!done){ done = true; cleanup(); resolve(null); } }, 7000);
     s.src = `https://itunes.apple.com/search?term=${term}&media=music&entity=song&limit=5&callback=${cb}`;
     document.body.appendChild(s);
   });
+}
+
+// *** התיקון המרכזי לזמינות בנייד ***
+// אם הרשת של המשתמש (בית/סלולרי) נחסמה זמנית ע"י אפל (rate-limit על כתובת
+// ה-IP המשותפת), פנייה ישירה מהמכשיר תמיד תיכשל, לא משנה כמה ננסה שוב.
+// הפתרון: לעבור דרך שרתי-מתווך (CORS proxy) - הבקשה יוצאת מכתובת IP אחרת
+// לגמרי (של השרת המתווך, לא של המכשיר), כך שחסימה על הרשת של המשתמש לא
+// משפיעה. מנסים כמה מתווכים שונים לפי סדר, ורק אם כולם נכשלים - JSONP ישיר.
+const ITUNES_URL_BASE = (term) => `https://itunes.apple.com/search?term=${term}&media=music&entity=song&limit=5`;
+const PROXY_BUILDERS = [
+  (term) => `https://api.allorigins.win/raw?url=${encodeURIComponent(ITUNES_URL_BASE(term))}`,
+  (term) => `https://corsproxy.io/?url=${encodeURIComponent(ITUNES_URL_BASE(term))}`,
+];
+
+async function itunesSearchRaw(term){
+  for(const build of PROXY_BUILDERS){
+    const data = await fetchJson(build(term), 7000);
+    if(data && data.results) return data;
+  }
+  // שני המתווכים נכשלו (או שהם עצמם עמוסים) - מנסים ישירות כמוצא אחרון
+  return await itunesJSONP(term);
 }
 
 // חשוב מאוד: אפל מגבילה ל-~20 חיפושים בדקה. לכן כל החיפושים עוברים דרך "תור"
@@ -1744,7 +1782,7 @@ function itunesSearchRaw(term){
 // (הצפה כזו היא מה שגרם לשגיאות 429/403 ולתקיעת האתר בטלפון)
 let itunesQueue = Promise.resolve();
 let lastItunesCall = 0;
-const ITUNES_MIN_GAP_MS = 3500;
+const ITUNES_MIN_GAP_MS = 2000;
 
 function itunesSearch(term){
   const run = async () => {
