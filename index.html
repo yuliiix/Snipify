@@ -2375,6 +2375,20 @@ function setMode(mode){
   stopSnippet();
   const myToken = ++modeSwitchToken;
 
+  // מנתקים לגמרי את הבקרים ממה שהיה קודם (למשל שיר יומי שהסתיים) - כדי
+  // שלא יישארו כפתורים פעילים שמצביעים על שיר ישן ממצב אחר לגמרי.
+  // startGame() בהמשך יפעיל אותם מחדש כשהסבב החדש באמת יתחיל.
+  currentSong = null;
+  gameOver = true;
+  els.playBtn.disabled = true;
+  els.stopBtn.disabled = true;
+  els.skipBtn.disabled = true;
+  els.guessInput.disabled = true;
+  els.guessBtn.disabled = true;
+  els.giveUpBtn.disabled = true;
+  els.guessInput.value = '';
+  els.suggestions.classList.remove('show');
+
   if(mode === 'daily'){
     const st = getDailyState();
     if(st && st.done){
