@@ -1622,9 +1622,14 @@ function mulberry32(seed){
   };
 }
 
+// אם השיר היומי של היום לא זמין ב-iTunes, עוברים דטרמיניסטית למועמד הבא
+// (seed+1, seed+2...) - כך שכל השחקנים עדיין מקבלים את אותו שיר חלופי,
+// ולא נתקעים בלולאה אינסופית על שיר שלא קיים.
+let dailyOffset = 0;
+
 function dailySong(){
   const d = new Date();
-  const seed = d.getFullYear() * 10000 + (d.getMonth()+1) * 100 + d.getDate();
+  const seed = d.getFullYear() * 10000 + (d.getMonth()+1) * 100 + d.getDate() + dailyOffset;
   const rand = mulberry32(seed);
   return SONGS[Math.floor(rand() * SONGS.length)];
 }
@@ -1776,12 +1781,20 @@ function isOriginalVersion(r, song){
 
 async function resolvePreview(song){
   const key = song.artist + '|' + song.title;
-  if(previewCache[key]) return previewCache[key];
+  if(previewCache[key]){
+    return previewCache[key].miss ? null : previewCache[key];
+  }
   const term = encodeURIComponent(song.artist + ' ' + song.title);
   const data = await itunesSearch(term);
-  const results = data && data.results ? data.results : [];
-  const hit = results.find(r => r.previewUrl && isOriginalVersion(r, song));
-  if(!hit) return null;
+  // אם ה-API עצמו לא ענה (רשת/חסימה זמנית) - לא שומרים כלום, ננסה שוב בפעם הבאה
+  if(!data || !data.results) return null;
+  const hit = data.results.find(r => r.previewUrl && isOriginalVersion(r, song));
+  if(!hit){
+    // השיר באמת לא קיים/לא עבר סינון - זוכרים את זה כדי לא לחפש אותו שוב ושוב
+    previewCache[key] = { miss: true };
+    savePreviewCache();
+    return null;
+  }
   const info = { url: hit.previewUrl, page: hit.trackViewUrl || '' };
   previewCache[key] = info;
   savePreviewCache();
@@ -1830,6 +1843,7 @@ async function initFirstSong(attempt){
   const ok = await prepareSong(peekNextSong());
   if(!ok){
     // השיר לא נמצא ב-iTunes - מדלגים לשיר הבא (עד 5 ניסיונות, בקצב מרוסן)
+    if(gameMode === 'daily') dailyOffset++; // ביומי, בלי זה נקבל שוב את אותו שיר
     takeNextSong();
     peekedSong = null;
     return initFirstSong(attempt + 1);
@@ -1908,6 +1922,8 @@ function skipUnavailableSong(){
   setWaveform(false);
   els.silentWarning.textContent = `"${currentSong.title}" לא זמין כרגע - עובר לשיר אחר...`;
   els.silentWarning.style.display = 'block';
+  if(gameMode === 'daily') dailyOffset++; // במצב יומי חובה להתקדם - אחרת נקבל שוב את אותו שיר לנצח
+  peekedSong = null;
   setTimeout(() => {
     els.startBtn.disabled = false;
     startGame();
