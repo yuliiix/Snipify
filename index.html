@@ -2344,10 +2344,28 @@ function endGame(won){
     els.nextBtn.textContent = 'לשחק עוד? המשיכו בללא הגבלה ←';
   } else {
     els.nextBtn.textContent = 'שיר הבא';
-    // טוענים מראש את השיר הבא - כשילחצו "שיר הבא" הניגון יהיה מיידי וישיר מהקליק
-    setTimeout(() => { preloadSong(peekNextSong()); setTimeout(warmLookahead, 4000); }, 300);
+    els.nextBtn.disabled = true;
+    prepareNextForButton();
+    setTimeout(warmLookahead, 4000);
   }
 }
+
+// מכינים את השיר הבא ורק אז משחררים את כפתור "שיר הבא" - כך שהלחיצה
+// עליו תמיד מיידית. אם המועמד לא זמין, מנסים את הבא בשקט (בלי לולאה
+// אינסופית, כי כל ניסיון "צורך" שיר אחר מהתור).
+let nextBtnToken = 0;
+function prepareNextForButton(){
+  const myToken = ++nextBtnToken;
+  const song = peekNextSong();
+  prepareSong(song, true).then(ok => {
+    if(myToken !== nextBtnToken) return;
+    if(!ok){ peekedSong = null; prepareNextForButton(); return; }
+    els.nextBtn.disabled = false;
+    els.nextBtn.textContent = 'שיר הבא';
+  });
+}
+
+let modeSwitchToken = 0;
 
 function setMode(mode){
   gameMode = mode;
@@ -2355,6 +2373,7 @@ function setMode(mode){
   els.unlimitedTab.classList.toggle('active', mode === 'unlimited');
   peekedSong = null;
   stopSnippet();
+  const myToken = ++modeSwitchToken;
 
   if(mode === 'daily'){
     const st = getDailyState();
@@ -2368,9 +2387,23 @@ function setMode(mode){
   els.feedback.className = 'feedback';
   els.feedback.textContent = '';
   els.reveal.classList.remove('show');
-  els.startBtn.disabled = false;
-  els.startBtn.textContent = '▶ הפעלה';
-  preloadSong(peekNextSong());
+
+  // הכפתור נשאר נעול עד שהשיר באמת מוכן - כך שברגע שאפשר ללחוץ, ההפעלה
+  // תמיד מיידית, בלי מסך טעינה שמופיע אחרי הלחיצה.
+  els.startBtn.disabled = true;
+  els.startBtn.textContent = 'טוען...';
+  const song = peekNextSong();
+  prepareSong(song, true).then(ok => {
+    if(myToken !== modeSwitchToken) return; // המשתמש כבר עבר למצב אחר בינתיים
+    if(!ok){
+      // השיר הראשון שנבחר לא זמין - מנסים את הבא, שקוף למשתמש
+      peekedSong = null;
+      setMode(mode);
+      return;
+    }
+    els.startBtn.disabled = false;
+    els.startBtn.textContent = '▶ הפעלה';
+  });
   setTimeout(warmLookahead, 4000);
 }
 
