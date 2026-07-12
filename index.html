@@ -1896,12 +1896,14 @@ function itunesJSONP(term){
 // לגמרי (של השרת המתווך, לא של המכשיר), כך שחסימה על הרשת של המשתמש לא
 // משפיעה. מנסים כמה מתווכים שונים לפי סדר, ורק אם כולם נכשלים - JSONP ישיר.
 //
-// הסדר חשוב! בדקנו את האמינות בפועל: corsproxy.io תומך רשמית בדומיינים
-// כמו github.io ונחשב יציב יחסית; codetabs הוא גיבוי סביר נוסף; allorigins.win
-// (שהיה ראשון קודם) מתועד כלא אמין - כ-50% מהבקשות אליו נכשלות, ואין לו
-// שום התחייבות זמינות רשמית - לכן הועבר לסוף הרשימה.
+// המתווך הראשון (snipify-itunes) הוא Worker פרטי שלנו ב-Cloudflare, עם קאש
+// אמיתי בקצה - ברגע ששיר נחפש פעם אחת (על ידי כל משתמש), הוא נשמר לשבוע
+// ומוחזר מיידית בפעם הבאה. לפעמים אפל חוסמת זמנית את כתובת ה-IP המשותפת
+// של Cloudflare (בגלל עומס ממפתחים אחרים) - לכן יש רשימת גיבוי מתחתיו.
 const ITUNES_URL_BASE = (term) => `https://itunes.apple.com/search?term=${term}&media=music&entity=song&limit=5`;
+const OWN_WORKER_URL = 'https://snipify-itunes.yuliittah1.workers.dev/';
 const PROXY_BUILDERS = [
+  (term) => `${OWN_WORKER_URL}?term=${term}`,
   (term) => `https://corsproxy.io/?url=${encodeURIComponent(ITUNES_URL_BASE(term))}`,
   (term) => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(ITUNES_URL_BASE(term))}`,
   (term) => `https://api.allorigins.win/raw?url=${encodeURIComponent(ITUNES_URL_BASE(term))}`,
