@@ -1895,18 +1895,24 @@ function itunesJSONP(term){
 // הפתרון: לעבור דרך שרתי-מתווך (CORS proxy) - הבקשה יוצאת מכתובת IP אחרת
 // לגמרי (של השרת המתווך, לא של המכשיר), כך שחסימה על הרשת של המשתמש לא
 // משפיעה. מנסים כמה מתווכים שונים לפי סדר, ורק אם כולם נכשלים - JSONP ישיר.
+//
+// הסדר חשוב! בדקנו את האמינות בפועל: corsproxy.io תומך רשמית בדומיינים
+// כמו github.io ונחשב יציב יחסית; codetabs הוא גיבוי סביר נוסף; allorigins.win
+// (שהיה ראשון קודם) מתועד כלא אמין - כ-50% מהבקשות אליו נכשלות, ואין לו
+// שום התחייבות זמינות רשמית - לכן הועבר לסוף הרשימה.
 const ITUNES_URL_BASE = (term) => `https://itunes.apple.com/search?term=${term}&media=music&entity=song&limit=5`;
 const PROXY_BUILDERS = [
-  (term) => `https://api.allorigins.win/raw?url=${encodeURIComponent(ITUNES_URL_BASE(term))}`,
   (term) => `https://corsproxy.io/?url=${encodeURIComponent(ITUNES_URL_BASE(term))}`,
+  (term) => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(ITUNES_URL_BASE(term))}`,
+  (term) => `https://api.allorigins.win/raw?url=${encodeURIComponent(ITUNES_URL_BASE(term))}`,
 ];
 
 async function itunesSearchRaw(term){
   for(const build of PROXY_BUILDERS){
-    const data = await fetchJson(build(term), 7000);
+    const data = await fetchJson(build(term), 6000);
     if(data && data.results) return data;
   }
-  // שני המתווכים נכשלו (או שהם עצמם עמוסים) - מנסים ישירות כמוצא אחרון
+  // כל המתווכים נכשלו (או שהם עצמם עמוסים) - מנסים ישירות כמוצא אחרון
   return await itunesJSONP(term);
 }
 
