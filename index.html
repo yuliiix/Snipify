@@ -2097,18 +2097,19 @@ function playSongSnippet(){
   els.stopBtn.disabled = false;
   els.silentWarning.style.display = 'none';
 
-  // *** שחרור הנגן באייפון - חייב לקרות כאן, בתוך המגע עצמו ***
-  // בלחיצה הראשונה אי-פעם מנגנים רגע של אודיו ישירות מהמגע (שקט אם השיר עוד
-  // לא מוכן). מאותו רגע הנגן "משוחרר" - וגם ניגון שמגיע אחרי טעינה א-סינכרונית
-  // (שבלעדיו היה נחסם באייפון בשקט) יעבוד.
+  // *** שחרור הנגן באייפון - חייב לקרות בתוך המגע עצמו ***
+  // רק אם השיר עוד לא מוכן צריך "ניגון-שקט" נפרד כדי לפתוח את הצינור מראש -
+  // אם השיר כבר מוכן, קריאת ה-play() האמיתית למטה כבר משמשת גם כשחרור,
+  // ואין צורך (וגם אסור!) לקרוא ל-play() פעמיים ברצף - זה יצר התנגשות בין
+  // שתי קריאות חופפות, שגרמה גם לשגיאה מוזרה וגם לבלבול בטיימר העצירה.
   if(!audioUnlocked){
     audioUnlocked = true;
-    try{
-      const up = audioEl.play();
-      if(up && up.catch) up.catch(() => { audioUnlocked = false; });
-    }catch(e){ audioUnlocked = false; }
     if(preparedSong !== currentSong){
-      audioEl.pause(); // ניגנו רק כדי לשחרר - עוצרים מיד (זה היה שקט/שיר לא רלוונטי)
+      try{
+        const up = audioEl.play();
+        if(up && up.catch) up.catch(() => {}); // לא מאפסים audioUnlocked - זו לא כשל אמיתי, רק "נקטע" בכוונה
+      }catch(e){}
+      audioEl.pause();
     }
   }
 
