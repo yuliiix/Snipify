@@ -2043,6 +2043,21 @@ audioEl.addEventListener('pause', () => setWaveform(false));
 let preparingSongKey = null;
 let preparingPromise = null;
 
+// *** רשת ביטחון עליונה: לא משנה מה קורה בפנים (גם אם יש תקלה לא צפויה
+// שגורמת לשרשרת ההבטחות לא להתיישב לעולם) - הפונקציה הזו מבטיחה שתמיד
+// תהיה תשובה תוך 15 שניות לכל היותר. זה חוסם לחלוטין כל אפשרות ל"קפיאה"
+// אמיתית של הממשק, גם אם יש עוד באג שלא זיהינו. ***
+function withHardTimeout(promise, ms){
+  return new Promise((resolve) => {
+    let done = false;
+    const timer = setTimeout(() => { if(!done){ done = true; resolve(false); } }, ms);
+    promise.then(
+      (v) => { if(!done){ done = true; clearTimeout(timer); resolve(v); } },
+      ()  => { if(!done){ done = true; clearTimeout(timer); resolve(false); } }
+    );
+  });
+}
+
 async function prepareSong(song, priority){
   const key = song.artist + '|' + song.title;
   // אם כבר יש בקשה פעילה בדיוק לאותו שיר (למשל preloadSong+playSongSnippet
@@ -2083,13 +2098,13 @@ async function initFirstSong(attempt){
   if(initInProgress && attempt === 0) return; // כבר רץ ברקע - לא מפעילים כפול
   initInProgress = true;
   attempt = attempt || 0;
-  if(attempt >= 5){
+  if(attempt >= 4){
     initInProgress = false;
     return; // גם אם ההכנה-מראש נכשלה, לחיצה על הכפתור עדיין תעבוד (טעינה לפי דרישה)
   }
-  const ok = await prepareSong(peekNextSong());
+  const ok = await withHardTimeout(prepareSong(peekNextSong(), true), 12000);
   if(!ok){
-    // השיר לא נמצא ב-iTunes - מדלגים לשיר הבא (עד 5 ניסיונות, בקצב מרוסן)
+    // השיר לא נמצא ב-iTunes (או שהחיפוש נתקע) - מדלגים לשיר הבא
     if(gameMode === 'daily') dailyOffset++; // ביומי, בלי זה נקבל שוב את אותו שיר
     takeNextSong();
     peekedSong = null;
@@ -2363,7 +2378,7 @@ let nextBtnToken = 0;
 function prepareNextForButton(){
   const myToken = ++nextBtnToken;
   const song = peekNextSong();
-  prepareSong(song, true).then(ok => {
+  withHardTimeout(prepareSong(song, true), 8000).then(ok => {
     if(myToken !== nextBtnToken) return;
     if(!ok){ peekedSong = null; prepareNextForButton(); return; }
     els.nextBtn.disabled = false;
@@ -2414,7 +2429,7 @@ function setMode(mode, attempt){
   // סובב לנצח בלי סימן חיצוני לכך. עכשיו יש הגבלה ל-6 ניסיונות, ואז
   // מוצגת הודעה אמיתית עם כפתור ידני לנסות שוב - לעולם לא נשארים
   // תקועים על "טוען..." בלי שום הסבר. ***
-  if(attempt >= 6){
+  if(attempt >= 4){
     els.startBtn.disabled = false;
     els.startBtn.textContent = '🔄 לא הצלחתי - לחצו לנסות שוב';
     els.startBtn.onclick = () => {
@@ -2427,7 +2442,7 @@ function setMode(mode, attempt){
   els.startBtn.disabled = true;
   els.startBtn.textContent = attempt === 0 ? 'טוען...' : `טוען... (ניסיון ${attempt + 1})`;
   const song = peekNextSong();
-  prepareSong(song, true).then(ok => {
+  withHardTimeout(prepareSong(song, true), 8000).then(ok => {
     if(myToken !== modeSwitchToken) return; // המשתמש כבר עבר למצב אחר בינתיים
     if(!ok){
       peekedSong = null;
