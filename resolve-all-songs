@@ -1,0 +1,53 @@
+// ===================================================================
+// סקריפט חד-פעמי: פותר את כתובות ה-preview האמיתיות לכל 1,270 השירים,
+// ומוריד קובץ JSON עם התוצאות. אחרי שתשלחי לי את הקובץ, אני אטמיע אותו
+// ישירות בקוד - וכל שיר יעלה מיידית, בלי חיפוש חי בזמן משחק, לצמיתות.
+//
+// איך מריצים:
+// 1. פתחי את המשחק החי בדפדפן (yuliiix.github.io/Snipify)
+// 2. לחצי F12 (או קליק ימני -> "בדוק"/Inspect) ועברי ללשונית Console
+// 3. הדביקי את כל התוכן הזה ולחצי Enter
+// 4. חכי (זה יכול לקחת 20-40 דקות ל-1,270 שירים - אפשר להשאיר את הטאב
+//    פתוח ברקע, זה לא צריך שתעשי כלום בזמן שזה רץ)
+// 5. בסוף, קובץ בשם snipify-resolved.json יורד אוטומטית - שלחי לי אותו
+// ===================================================================
+
+(async function resolveAllSongs(){
+  const results = {};
+  let done = 0, found = 0, missing = 0;
+  const total = SONGS.length;
+
+  console.log(`מתחיל לפתור ${total} שירים... זה ייקח זמן, אפשר להשאיר ברקע.`);
+
+  for(const song of SONGS){
+    const key = song.artist + '|' + song.title;
+    try{
+      const info = await resolvePreview(song);
+      if(info){
+        results[key] = { url: info.url, page: info.page || '' };
+        found++;
+      } else {
+        missing++;
+      }
+    }catch(e){
+      missing++;
+    }
+    done++;
+    if(done % 20 === 0 || done === total){
+      console.log(`התקדמות: ${done}/${total} (נמצאו: ${found}, לא נמצאו: ${missing})`);
+    }
+  }
+
+  console.log(`סיום! נמצאו ${found} מתוך ${total} שירים.`);
+
+  // מורידים קובץ JSON עם התוצאות
+  const blob = new Blob([JSON.stringify(results, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'snipify-resolved.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  console.log('קובץ snipify-resolved.json ירד! שלחי אותו ל-Claude כדי שיטמיע אותו במשחק.');
+})();
