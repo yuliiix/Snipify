@@ -1900,12 +1900,19 @@ function rememberGoodSource(idx){
 }
 
 async function itunesSearchRaw(term){
-  for(const [build, idx] of getOrderedBuilders()){
-    const data = await fetchJson(build(term), 3500);
-    if(data && data.results){ rememberGoodSource(idx); return data; }
+  const ordered = getOrderedBuilders();
+  // מנסים קודם את ה-Worker שלנו, ואז ישר את הפנייה הישירה ל-iTunes (אם
+  // החסימה שהייתה על כתובת ה-IP המשותפת כבר התאפסה - זה הכי מהיר ואמין,
+  // בלי תלות בשום שירות ציבורי שלישי). המתווכים הציבוריים האחרים - גיבוי.
+  const directAttempt = ordered.findIndex(([, idx]) => idx === 0) === 0
+    ? [ordered[0], ['direct', null], ...ordered.slice(1)]
+    : [...ordered, ['direct', null]];
+  for(const item of directAttempt){
+    const [build, idx] = item;
+    const data = build === 'direct' ? await itunesJSONP(term) : await fetchJson(build(term), 3500);
+    if(data && data.results){ if(idx !== null) rememberGoodSource(idx); return data; }
   }
-  // כל המתווכים נכשלו (או שהם עצמם עמוסים) - מנסים ישירות כמוצא אחרון
-  return await itunesJSONP(term);
+  return null;
 }
 
 // חשוב מאוד: אפל מגבילה ל-~20 חיפושים בדקה. לכן בקשות רקע (חימום מראש)
